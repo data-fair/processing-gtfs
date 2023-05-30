@@ -44,11 +44,11 @@
       }]
     }, {
         "title": "Paramètres",
+        "required": ["url"],
         "properties": {
-            "datasetID":{
-                "type": "string",
-                "title": "ID dataset data.gouv.fr",
-                "description": "Identifiant du jeu de données à utiliser sur le portail data.gouv.fr (ex: repertoire-national-des-associations)"
+            "url":{
+              "type": "string",
+              "title": "l'Url d'accès aux données sources (source zip)"
             },
             "filter":{
                 "type": "string",
