@@ -13,7 +13,7 @@
             "type": "object",
             "required": ["title"],
             "properties": {
-              "title": {"type": "string", "title": "Titre (laissez vide pour utiliser le nom de fichier téléchargé)"}
+              "title": {"type": "string", "title": "Titre"}
             }
           }
         }
