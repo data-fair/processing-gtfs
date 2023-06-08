@@ -45,7 +45,7 @@
             },
             "dataset": {
               "type": "object",
-              "title": "Jeu de donnée existant",
+              "title": "Jeu de données existant",
               "description": "Sélectionnez un jeu de données GTFS métadonnées uniquement",
               "x-fromUrl": "{context.dataFairUrl}/api/v1/datasets?q={q}&select=id,title&{context.ownerFilter}",
               "x-itemsProp": "results",

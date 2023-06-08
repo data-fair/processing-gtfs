@@ -12,9 +12,9 @@ describe('GTFS', function () {
       },
       processingConfig: {
         clearFiles: false,
-        datasetMode: 'create',
-        dataset: { title: 'GTFS Test', id: 'gtfs-test' },
-        url: 'https://transport-data-gouv-fr-resource-history-prod.cellar-c2.services.clever-cloud.com/80581/80581.20230120.061118.114098.zip'
+        datasetMode: 'update',
+        dataset: { title: 'GTFS Kiceo', id: 'gtfs-kiceo' },
+        url: 'https://ratpdev-mosaic-prod-bucket-raw.s3-eu-west-1.amazonaws.com/21/exports/1/gtfs.zip'
       },
       tmpDir: 'data/'
     }, config, false)
