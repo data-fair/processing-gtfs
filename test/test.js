@@ -12,8 +12,8 @@ describe('GTFS', function () {
       },
       processingConfig: {
         clearFiles: false,
-        datasetMode: 'update',
-        dataset: { title: 'GTFS Kiceo', id: 'gtfs-kiceo' },
+        datasetMode: 'create',
+        dataset: { title: 'GTFS Test Kiceo' },
         url: 'https://ratpdev-mosaic-prod-bucket-raw.s3-eu-west-1.amazonaws.com/21/exports/1/gtfs.zip'
       },
       tmpDir: 'data/'

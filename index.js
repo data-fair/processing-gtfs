@@ -8,5 +8,5 @@ exports.run = async ({ processingConfig, tmpDir, axios, log, patchConfig }) => {
 
   await download(processingConfig, tmpDir, axios, log)
   await process(tmpDir, log)
-  await upload(processingConfig, tmpDir, axios, log)
+  await upload(processingConfig, tmpDir, axios, log, patchConfig)
 }
