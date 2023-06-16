@@ -13,7 +13,7 @@ describe('GTFS', function () {
       processingConfig: {
         clearFiles: false,
         datasetMode: 'create',
-        dataset: { title: 'GTFS Test Kiceo' },
+        dataset: { title: 'GTFS Test' },
         url: 'https://ratpdev-mosaic-prod-bucket-raw.s3-eu-west-1.amazonaws.com/21/exports/1/gtfs.zip'
       },
       tmpDir: 'data/'
