@@ -1,6 +1,6 @@
 {
   "name": "@data-fair/processing-gtfs",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Load GTFS data into data-fair datasets",
   "main": "index.js",
   "directories": {
