@@ -12,9 +12,10 @@ describe('GTFS', function () {
       },
       processingConfig: {
         clearFiles: true,
+        downloadZip: false,
         datasetMode: 'create',
         dataset: { title: 'GTFS Test' },
-        url: 'https://ratpdev-mosaic-prod-bucket-raw.s3-eu-west-1.amazonaws.com/21/exports/1/gtfs.zip'
+        url: 'https://cotesdarmor.transdev-bretagne.com/sites/default/files/2024-01/GTFS_Kicéo.zip'
       },
       tmpDir: 'data/'
     }, config, false)
