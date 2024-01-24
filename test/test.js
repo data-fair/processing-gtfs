@@ -12,10 +12,10 @@ describe('GTFS', function () {
       },
       processingConfig: {
         clearFiles: true,
-        downloadZip: false,
+        downloadZip: true,
         datasetMode: 'create',
         dataset: { title: 'GTFS Test' },
-        url: 'https://cotesdarmor.transdev-bretagne.com/sites/default/files/2024-01/GTFS_Kicéo.zip'
+        url: 'https://koumoul.com/static/gtfs-gp.zip'
       },
       tmpDir: 'data/'
     }, config, false)
