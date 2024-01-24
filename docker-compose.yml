@@ -1,0 +1,11 @@
+version: '3'
+services:
+  sftp:
+    image: atmoz/sftp
+    volumes:
+      - ./sftp-test:/home/test/upload
+      - ./users.conf:/etc/sftp/users.conf:ro
+    ports:
+      - "2222:22"
+    environment:
+      - USERS=test:testmotdepasse:1001:100

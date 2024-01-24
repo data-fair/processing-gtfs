@@ -8,14 +8,15 @@ describe('GTFS', function () {
     this.timeout(100000)
     const context = testUtils.context({
       pluginConfig: {
-
       },
       processingConfig: {
-        clearFiles: true,
-        downloadZip: true,
         datasetMode: 'create',
         dataset: { title: 'GTFS Test' },
-        url: 'https://koumoul.com/static/gtfs-gp.zip'
+        url: 'sftp://localhost:2222/upload/gtfs-gp.zip',
+        username: 'test',
+        password: 'testmotdepasse',
+        clearFiles: true,
+        downloadZip: true
       },
       tmpDir: 'data/'
     }, config, false)
