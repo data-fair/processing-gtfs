@@ -77,8 +77,25 @@
           "title": "l'Url d'accès aux données sources (source zip)",
           "description": "les protocoles supportés sont HTTP, HTTPS et SFTP"
         },
-        "username": {"title": "Utilisateur", "type": "string"},
-        "password": {"title": "Mot de passe", "type": "string", "x-props": {"type": "password"}},
+        "username": {
+          "title": "Utilisateur", 
+          "type": "string",
+          "layout": {
+            "props": {
+              "autocomplete": "new-text"
+            }
+          }
+        },
+        "password": {
+          "title": "Mot de passe", 
+          "type": "string", 
+          "layout": {
+            "props": {
+              "type": "password",
+              "autocomplete": "new-password"
+            }
+          }
+        },
         "downloadZip": {
           "type": "boolean",
           "title": "Télécharger le fichier zip",
