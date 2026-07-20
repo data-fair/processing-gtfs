@@ -1,0 +1,5 @@
+stop_id,stop_code,stop_name,stop_desc,stop_lat,stop_lon,zone_id,stop_url,location_type,parent_station,stop_timezone,wheelchair_boarding
+STOP_A12,A12,Gare routière,Quai 3,42.7028,9.4501,Z1,https://exemple.fr/a12,0,,Europe/Paris,1
+STOP_B7,B7,Plage du Lido,,42.7150,9.4602,Z1,,0,,,0
+STOP_C3,C3,Hôpital,,42.6980,9.4400,Z2,,0,,,
+GARE-STATION,,Pôle d'échanges,,,,,,1,,,

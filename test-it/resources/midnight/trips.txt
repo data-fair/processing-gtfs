@@ -1,0 +1,2 @@
+trip_id,route_id,service_id,shape_id
+N1-T1,N1,SERV-N,

@@ -1,64 +1,111 @@
 {
   "type": "object",
-  "x-display": "tabs",
-  "required": [
-    "datasetMode"
-  ],
+  "layout": "tabs",
+  "required": ["datasetMode", "url"],
   "allOf": [
     {
-      "title": "Jeu de données",
+      "title": "Jeux de données",
+      "default": {
+        "datasetMode": "create"
+      },
       "oneOf": [
         {
-          "title": "Créer un jeu de données",
-          "required": [
-            "dataset"
-          ],
+          "title": "Créer les jeux de données",
+          "required": ["datasetTitle", "resources"],
           "properties": {
             "datasetMode": {
               "type": "string",
               "const": "create",
               "title": "Action"
             },
-            "dataset": {
+            "datasetTitle": {
+              "type": "string",
+              "title": "Titre de base des jeux de données",
+              "description": "Chaque jeu créé porte ce titre suivi de son rôle, par exemple « Réseau Kicéo - arrêts »."
+            },
+            "resources": {
               "type": "object",
-              "required": [
-                "title"
-              ],
+              "title": "Jeux de données à produire",
+              "description": "Seules les données cochées sont lues dans l'archive GTFS.",
               "properties": {
-                "title": {
-                  "type": "string",
-                  "title": "Titre"
+                "metadata": {
+                  "type": "boolean",
+                  "title": "Métadonnées",
+                  "description": "Jeu sans données, porteur de l'archive ou des fichiers GTFS en pièces jointes.",
+                  "default": true
+                },
+                "stops": {
+                  "type": "boolean",
+                  "title": "Arrêts",
+                  "description": "Un point par arrêt, avec les lignes qui le desservent.",
+                  "default": true
+                },
+                "stopTimes": {
+                  "type": "boolean",
+                  "title": "Horaires",
+                  "description": "Un passage par arrêt et par course, avec la période de validité.",
+                  "default": true
+                },
+                "shapes": {
+                  "type": "boolean",
+                  "title": "Tracés",
+                  "description": "Un tracé par forme déclarée dans shapes.txt.",
+                  "default": true
                 }
               }
             }
           }
         },
         {
-          "title": "Mettre à jour un jeu de données (fichier)",
-          "required": [
-            "dataset"
-          ],
+          "title": "Mettre à jour les jeux de données",
+          "required": ["datasets"],
           "properties": {
             "datasetMode": {
               "type": "string",
               "const": "update"
             },
-            "dataset": {
-              "type": "object",
-              "title": "Jeu de données existant",
-              "description": "Sélectionnez un jeu de données GTFS métadonnées uniquement",
-              "x-fromUrl": "{context.dataFairUrl}/api/v1/datasets?q={q}&select=id,title&{context.ownerFilter}",
-              "x-itemsProp": "results",
-              "x-itemTitle": "title",
-              "x-itemKey": "id",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "title": "Identifiant"
+            "datasets": {
+              "type": "array",
+              "title": "Jeux de données à mettre à jour",
+              "description": "Un jeu par rôle. Retirer une ligne cesse de produire la donnée correspondante.",
+              "layout": {
+                "comp": "list",
+                "listEditMode": "inline",
+                "messages": {
+                  "addItem": "Ajouter un jeu de données"
+                }
+              },
+              "items": {
+                "type": "object",
+                "required": ["key", "id"],
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "title": "Rôle",
+                    "oneOf": [
+                      { "const": "metadata", "title": "Métadonnées" },
+                      { "const": "stops", "title": "Arrêts" },
+                      { "const": "stop-times", "title": "Horaires" },
+                      { "const": "shapes", "title": "Tracés" }
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "title": "Identifiant"
+                  },
+                  "title": {
+                    "type": "string",
+                    "title": "Titre"
+                  }
                 },
-                "title": {
-                  "type": "string",
-                  "title": "Titre"
+                "layout": {
+                  "getItems": {
+                    "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&${context.ownerFilter}&raw=true",
+                    "qSearchParam": "q",
+                    "itemsResults": "data.results",
+                    "itemTitle": "item.title",
+                    "itemKey": "item.id"
+                  }
                 }
               }
             }
@@ -68,42 +115,69 @@
     },
     {
       "title": "Paramètres",
-      "required": [
-        "url"
-      ],
+      "required": ["url"],
       "properties": {
         "url": {
           "type": "string",
-          "title": "l'Url d'accès aux données sources (source zip)",
-          "description": "les protocoles supportés sont HTTP, HTTPS et SFTP"
+          "title": "URL d'accès à l'archive GTFS",
+          "description": "Les protocoles supportés sont HTTP, HTTPS et SFTP."
         },
         "username": {
-          "title": "Utilisateur", 
           "type": "string",
+          "title": "Utilisateur",
           "layout": {
             "props": {
-              "autocomplete": "new-text"
+              "autocomplete": "suppress"
             }
           }
         },
         "password": {
-          "title": "Mot de passe", 
-          "type": "string", 
+          "type": "string",
+          "title": "Mot de passe",
           "layout": {
             "props": {
               "type": "password",
-              "autocomplete": "new-password"
+              "autocomplete": "suppress"
+            }
+          }
+        },
+        "sshKey": {
+          "type": "string",
+          "title": "Clé privée SSH",
+          "description": "Alternative au mot de passe pour une source SFTP.",
+          "layout": {
+            "props": {
+              "type": "password",
+              "autocomplete": "suppress"
             }
           }
         },
         "downloadZip": {
           "type": "boolean",
-          "title": "Télécharger le fichier zip",
-          "description": "Télécharger le fichier zip ou l'ensemble des fichiers contenus dans le zip"
+          "title": "Joindre l'archive plutôt que les fichiers",
+          "description": "Coché, le zip est joint tel quel au jeu Métadonnées. Décoché, ce sont les fichiers GTFS qui sont joints un par un.",
+          "default": false
         },
         "clearFiles": {
           "type": "boolean",
-          "title": "Supprimer les fichiers existants"
+          "title": "Supprimer les fichiers temporaires",
+          "default": true
+        }
+      }
+    },
+    {
+      "title": "Concepts",
+      "description": "À renseigner uniquement si votre organisation dispose d'un vocabulaire privé. Laissés vides, seuls les concepts du vocabulaire standard sont posés.",
+      "properties": {
+        "stopConcept": {
+          "type": "string",
+          "title": "Concept « arrêt »",
+          "description": "Posé sur stop_id, dans les arrêts comme dans les horaires. C'est cette annotation croisée qui rend les deux jeux joignables."
+        },
+        "routeConcept": {
+          "type": "string",
+          "title": "Concept « ligne »",
+          "description": "Posé sur les lignes desservant un arrêt et sur le nom court de la ligne d'un tracé."
         }
       }
     }
