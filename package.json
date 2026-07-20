@@ -2,16 +2,24 @@
   "name": "@data-fair/processing-gtfs",
   "version": "0.3.10",
   "description": "Load GTFS data into data-fair datasets",
-  "main": "index.js",
-  "directories": {
-    "lib": "lib",
-    "test": "test"
-  },
+  "main": "index.ts",
+  "type": "module",
   "scripts": {
-    "test": "mocha",
-    "lint": "eslint --ignore-path .gitignore .",
-    "lint-fix": "eslint --ignore-path .gitignore --fix ."
+    "lint": "eslint .",
+    "lint-fix": "eslint --fix .",
+    "prepare": "husky || true",
+    "build-types": "export NODE_OPTIONS='--experimental-strip-types' && df-build-types ./",
+    "test-base": "NODE_ENV=test node --experimental-strip-types --test-force-exit --test-concurrency=1 --test --test-reporter=spec --test-reporter-destination=stdout",
+    "test": "npm run test-base test-it/*.ts"
   },
+  "imports": {
+    "#config": "./lib/config.ts",
+    "#types/*": "./types/*"
+  },
+  "files": [
+    "processing-config-schema.json",
+    "./lib/**/*"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/data-fair/processing-gtfs.git"
@@ -19,30 +27,35 @@
   "keywords": [
     "data-fair-processings-plugin"
   ],
-  "author": "",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "bugs": {
     "url": "https://github.com/data-fair/processing-gtfs/issues"
   },
   "homepage": "https://github.com/data-fair/processing-gtfs#readme",
-  "devDependencies": {
-    "@data-fair/processings-test-utils": "^0.5.2",
-    "config": "^3.3.9",
-    "eslint": "^8.41.0",
-    "mocha": "^10.2.0",
-    "standard": "^17.0.0"
-  },
   "dependencies": {
-    "child_process": "^1.0.2",
     "csv": "^6.3.6",
     "form-data": "^4.0.0",
-    "fs-extra": "^11.1.1",
-    "geojson": "^0.5.0",
-    "mime-types": "^2.1.35",
-    "path": "^0.12.7",
-    "pump": "^3.0.0",
-    "ssh2-sftp-client": "^12.0.1",
-    "stream": "^0.0.2",
-    "util": "^0.12.5"
+    "fs-extra": "^11.3.0",
+    "ssh2-sftp-client": "^12.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@data-fair/lib-common-types": "^1.20.6",
+    "@data-fair/lib-processing-dev": "^0.3.0",
+    "@data-fair/lib-types-builder": "^1.7.0",
+    "@data-fair/lib-utils": "^1.11.0",
+    "@types/debug": "^4.1.13",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^22.15.3",
+    "@types/ssh2-sftp-client": "^9.0.6",
+    "config": "^4.4.1",
+    "debug": "^4.4.0",
+    "eslint": "^9.26.0",
+    "husky": "^9.1.7",
+    "neostandard": "^0.12.1",
+    "nock": "^14.0.12",
+    "typescript": "^5.8.3",
+    "ws": "^8.19.0"
   }
 }
