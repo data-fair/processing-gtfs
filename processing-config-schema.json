@@ -151,17 +151,44 @@
               "autocomplete": "suppress"
             }
           }
-        },
-        "downloadZip": {
-          "type": "boolean",
-          "title": "Joindre l'archive plutôt que les fichiers",
-          "description": "Coché, le zip est joint tel quel au jeu Métadonnées. Décoché, ce sont les fichiers GTFS qui sont joints un par un.",
-          "default": false
-        },
-        "clearFiles": {
-          "type": "boolean",
-          "title": "Supprimer les fichiers temporaires",
-          "default": true
+        }
+      },
+      "if": {
+        "anyOf": [
+          {
+            "required": ["resources"],
+            "properties": {
+              "resources": {
+                "required": ["metadata"],
+                "properties": {
+                  "metadata": { "const": true }
+                }
+              }
+            }
+          },
+          {
+            "required": ["datasets"],
+            "properties": {
+              "datasets": {
+                "contains": {
+                  "required": ["key"],
+                  "properties": {
+                    "key": { "const": "metadata" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "properties": {
+          "downloadZip": {
+            "type": "boolean",
+            "title": "Publier les fichiers sources comme fichier zip sur le jeu de métadonnées",
+            "description": "Sinon les fichiers sources seront publiés directement dézippés.",
+            "default": false
+          }
         }
       }
     },

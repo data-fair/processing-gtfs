@@ -99,10 +99,11 @@ const routeType: SchemaProperty = {
   key: 'route_type',
   title: 'Mode de transport',
   type: 'integer',
-  // no x-labelsRestricted: GTFS defines extended route types (100 to 1700) that would
-  // otherwise be rejected
+  // no x-labelsRestricted: the extended values below are an open list, a feed may
+  // legitimately use one that is not labelled here, and it would then be rejected
   'x-labels': {
     undefined: 'Non renseigné',
+    // basic types
     0: 'Tramway ou train léger',
     1: 'Métro',
     2: 'Train',
@@ -112,7 +113,59 @@ const routeType: SchemaProperty = {
     6: 'Téléphérique',
     7: 'Funiculaire',
     11: 'Trolleybus',
-    12: 'Monorail'
+    12: 'Monorail',
+    // extended types: widely used across European feeds, where a regional train
+    // arrives as 106 and a metro as 401 rather than as 2 and 1
+    100: 'Train',
+    101: 'Train à grande vitesse',
+    102: 'Train grandes lignes',
+    103: 'Train interrégional',
+    105: 'Train de nuit',
+    106: 'Train régional',
+    107: 'Train touristique',
+    108: 'Navette ferroviaire',
+    109: 'Train de banlieue',
+    200: 'Autocar',
+    201: 'Autocar international',
+    202: 'Autocar national',
+    204: 'Autocar régional',
+    208: 'Autocar express',
+    400: 'Train urbain',
+    401: 'Métro',
+    402: 'Métro souterrain',
+    403: 'Train urbain',
+    405: 'Monorail',
+    700: 'Bus',
+    701: 'Bus régional',
+    702: 'Bus express',
+    704: 'Bus local',
+    715: 'Transport à la demande',
+    717: 'Taxi collectif',
+    800: 'Trolleybus',
+    900: 'Tramway',
+    1000: 'Transport fluvial',
+    1100: 'Transport aérien',
+    1200: 'Ferry',
+    1300: 'Transport par câble',
+    1400: 'Funiculaire',
+    1500: 'Taxi',
+    1501: 'Taxi communal',
+    1700: 'Autre'
+  }
+}
+
+// GTFS only states that the two values are opposite directions: which one is the
+// outbound trip is up to the producer, so the labels must not claim more than that
+const directionId: SchemaProperty = {
+  key: 'direction_id',
+  title: 'Sens de circulation',
+  description: 'La correspondance entre le sens et la destination est définie par le producteur du GTFS.',
+  type: 'integer',
+  ignoreDetection: true,
+  'x-labels': {
+    undefined: 'Non renseigné',
+    0: 'Sens 1',
+    1: 'Sens 2'
   }
 }
 
@@ -160,6 +213,19 @@ export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<Re
     { key: 'stop_destination', title: 'Destination', description: 'Dernier arrêt de la course.', type: 'string' },
     { key: 'route_name', title: 'Ligne', type: 'string' },
     routeColor,
+    directionId,
+    {
+      key: 'timepoint',
+      title: 'Précision de l\'horaire',
+      type: 'integer',
+      ignoreDetection: true,
+      // an empty timepoint means the time is exact, per the GTFS spec
+      'x-labels': {
+        undefined: 'Horaire garanti',
+        0: 'Horaire approximatif',
+        1: 'Horaire garanti'
+      }
+    },
     { key: 'week', title: 'Jours de circulation', type: 'string', separator: ';' },
     { key: 'start_date', title: 'Début de validité', type: 'string', format: 'date', 'x-refersTo': START_DATE },
     { key: 'end_date', title: 'Fin de validité', type: 'string', format: 'date', 'x-refersTo': END_DATE },
@@ -203,6 +269,7 @@ export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<Re
     { key: 'route_desc', title: 'Description de la ligne', type: 'string', 'x-refersTo': DESCRIPTION },
     routeType,
     routeColor,
+    directionId,
     wheelchairBoarding,
     bikesAllowed
   ]

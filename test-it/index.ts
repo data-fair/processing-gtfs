@@ -36,7 +36,6 @@ describe('processing-gtfs', () => {
         resources: { metadata: true, stops: true, stopTimes: true, shapes: true },
         url: 'sftp://localhost:2222/upload/gtfs-gp.zip',
         username: 'test',
-        clearFiles: true,
         downloadZip: true
       },
       secrets: { password: 'testmotdepasse' }

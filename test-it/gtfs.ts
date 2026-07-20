@@ -100,6 +100,20 @@ describe('horaires', () => {
     assert.equal(rows.find(r => r.stop_id === 'STOP_A12')?.route_color, '#FF0000')
   })
 
+  it('reporte le sens de circulation et la précision de l\'horaire', async () => {
+    const ref = await loadReference(ALNUM)
+    const { tripEnds } = await buildStopTimesIndex(ALNUM, ref, { collectStopRoutes: false }, noopLog)
+    const out = path.join(OUT, 'stop_times_direction.csv')
+    await writeStopTimes(ALNUM, ref, tripEnds, out, noopLog)
+    const rows = await readCsv(out)
+    const aller = rows.find(r => r.trip_id === 'TRIP-A1' && r.stop_id === 'STOP_A12')
+    assert.equal(aller?.direction_id, '0', 'le sens vient de trips.txt')
+    assert.equal(aller?.timepoint, '0')
+    assert.equal(rows.find(r => r.trip_id === 'TRIP-B1')?.direction_id, '1')
+    // un timepoint vide vaut « horaire garanti » selon la spec, il reste vide en donnée
+    assert.equal(rows.find(r => r.trip_id === 'TRIP-B1')?.timepoint, '')
+  })
+
   it('laisse intactes les heures au-delà de 24:00:00', async () => {
     const ref = await loadReference(MIDNIGHT)
     const { tripEnds } = await buildStopTimesIndex(MIDNIGHT, ref, { collectStopRoutes: false }, noopLog)
@@ -143,20 +157,30 @@ describe('tracés', () => {
     ])
     assert.equal(shapeA.properties.route_short_name, 'A')
     assert.equal(shapeA.properties.wheelchair_boarding, '1')
+    assert.equal(shapeA.properties.direction_id, '0')
   })
 })
 
 describe('schémas de sortie', () => {
   const schemas = buildSchemas()
 
+  // direction_id is deliberately absent: despite its name it is an enum, not an identifier
+  const IDENTIFIERS = ['trip_id', 'stop_id', 'route_id', 'shape_id', 'zone_id', 'parent_station']
+
   it('type les identifiants en chaîne, jamais en entier', () => {
     for (const [name, schema] of Object.entries(schemas)) {
       for (const property of schema) {
-        if (/(^|_)id$|parent_station/.test(property.key)) {
+        if (IDENTIFIERS.includes(property.key)) {
           assert.equal(property.type, 'string', `${name}.${property.key} doit être une chaîne`)
         }
       }
     }
+  })
+
+  it('type le sens de circulation en entier malgré son suffixe _id', () => {
+    const byKey = Object.fromEntries(schemas.shapes.map(p => [p.key, p]))
+    assert.equal(byKey.direction_id.type, 'integer')
+    assert.equal(byKey.direction_id['x-labels']?.[1], 'Sens 2')
   })
 
   it('pose un libellé et une géométrie sur les arrêts', () => {

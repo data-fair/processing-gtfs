@@ -61,6 +61,7 @@ export interface TripRef {
   route_id: string
   service_id: string
   shape_id: string
+  direction_id: string
   wheelchair_boarding: string
   bikes_allowed: string
 }
@@ -143,6 +144,7 @@ export const loadTrips = async (dir: string): Promise<Map<string, TripRef>> => {
       route_id: line.route_id ?? '',
       service_id: line.service_id ?? '',
       shape_id: line.shape_id ?? '',
+      direction_id: line.direction_id ?? '',
       wheelchair_boarding: line.wheelchair_accessible ?? '',
       bikes_allowed: line.bikes_allowed ?? ''
     })

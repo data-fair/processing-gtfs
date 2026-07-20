@@ -56,6 +56,7 @@ export const writeShapes = async (
           route_desc: route?.route_desc ?? '',
           route_type: route?.route_type ?? '',
           route_color: route?.route_color ?? '',
+          direction_id: trip?.direction_id ?? '',
           wheelchair_boarding: trip?.wheelchair_boarding ?? '',
           bikes_allowed: trip?.bikes_allowed ?? ''
         },

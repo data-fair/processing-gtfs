@@ -13,6 +13,7 @@ import {
   createDataDataset,
   createMetadataDataset,
   datasetTitle,
+  describeError,
   refreshSchemaLabels,
   syncRelatedDatasets,
   uploadAttachments,
@@ -40,6 +41,58 @@ const wantedFromResources = (resources: any = {}): ResourceKey[] => {
   return flags.filter(([, on]) => on).map(([key]) => key)
 }
 
+/** How the previous version derived the id of each dataset from the metadata one. */
+const LEGACY_SUFFIXES: [ResourceKey, string][] = [
+  ['metadata', ''],
+  ['stops', '-stops'],
+  ['stop-times', '-stop-times'],
+  ['shapes', '-shapes']
+]
+
+/**
+ * Adopt a config written by the previous version, which only ever kept the metadata
+ * dataset and derived the others by suffix.
+ *
+ * Done here rather than in prepare: prepare receives no axios, so it could not check
+ * that the derived ids exist and would rewrite the config blind. Every id is confirmed
+ * by a GET, and one that no longer exists is left out rather than assumed.
+ */
+export const migrateLegacyConfig = async (
+  config: any,
+  axios: ProcessingContext['axios'],
+  log: ProcessingContext['log'],
+  patchConfig: ProcessingContext['patchConfig']
+): Promise<DatasetRef[] | null> => {
+  if (config.datasets?.length || !config.dataset?.id) return null
+
+  await log.step('Migration de la configuration')
+  await log.warning("Configuration héritée de la version précédente : les jeux de données sont retrouvés à partir de l'identifiant du jeu de métadonnées.")
+
+  const refs: DatasetRef[] = []
+  for (const [key, suffix] of LEGACY_SUFFIXES) {
+    const id = config.dataset.id + suffix
+    try {
+      const live = (await axios.get(`api/v1/datasets/${id}`)).data
+      refs.push({ key, id, title: live.title || id })
+      await log.info(`${RESOURCE_TITLES[key]} : ${id}`)
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        await log.info(`${RESOURCE_TITLES[key]} : aucun jeu "${id}", ignoré`)
+        continue
+      }
+      throw new Error(describeError(err))
+    }
+  }
+
+  if (!refs.length) {
+    throw new Error(`Aucun jeu de données n'a été retrouvé à partir de "${config.dataset.id}". Configurez les jeux à mettre à jour à la main.`)
+  }
+
+  await patchConfig({ datasetMode: 'update', datasets: refs, dataset: undefined } as any)
+  await log.info(`${refs.length} jeux de données repris dans la nouvelle configuration.`)
+  return refs
+}
+
 const refsFromConfig = (datasets: any[]): DatasetRef[] => {
   const seen = new Set<string>()
   return datasets.map((entry) => {
@@ -62,7 +115,9 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   }
 
   const create = config.datasetMode === 'create'
-  const configuredRefs = create ? [] : refsFromConfig(config.datasets ?? [])
+  const configuredRefs = create
+    ? []
+    : (await migrateLegacyConfig(config, axios, log, patchConfig)) ?? refsFromConfig(config.datasets ?? [])
   const wanted = create ? wantedFromResources(config.resources) : configuredRefs.map(r => r.key)
   if (!wanted.length) throw new Error('Aucun jeu de données à produire : cochez au moins une ressource.')
 
@@ -167,6 +222,6 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   await log.step('Jeux liés')
   await syncRelatedDatasets(axios, refs, log)
 
-  if (config.clearFiles) await fs.remove(tmpDir)
+  // no cleanup here: the worker creates tmpDir per run and removes it in a finally
   await log.info('Traitement terminé.')
 }
