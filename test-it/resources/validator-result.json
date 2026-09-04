@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-12-31",
+    "networks": ["Réseau Test"],
+    "modes": ["bus", "tramway"],
+    "issues_count": {
+      "IdNotAscii": 171,
+      "NullDuration": 10,
+      "MissingName": 1,
+      "UnusedStop": 4
+    },
+    "stats": {
+      "stops_count": 17,
+      "lines_count": 5,
+      "trips_count": 11
+    }
+  },
+  "validations": {
+    "IdNotAscii": [
+      {
+        "severity": "Warning",
+        "issue_type": "IdNotAscii",
+        "object_id": "AllBél",
+        "object_type": "Stop",
+        "object_name": "",
+        "related_objects": [],
+        "geojson": { "type": "FeatureCollection", "features": [] }
+      },
+      {
+        "severity": "Warning",
+        "issue_type": "IdNotAscii",
+        "object_id": "Arrêt#2",
+        "object_type": "Stop",
+        "object_name": "Deuxième arrêt"
+      }
+    ],
+    "NullDuration": [
+      {
+        "severity": "Warning",
+        "issue_type": "NullDuration",
+        "object_id": "trip-1",
+        "object_type": "Trip",
+        "details": "the travel duration between two stops is null"
+      }
+    ],
+    "MissingName": [
+      {
+        "severity": "Error",
+        "issue_type": "MissingName",
+        "object_id": "agency-1",
+        "object_type": "Agency"
+      }
+    ],
+    "UnusedStop": [
+      {
+        "severity": "Information",
+        "issue_type": "UnusedStop",
+        "object_id": "stop-9",
+        "object_type": "Stop",
+        "object_name": "Arrêt inutilisé"
+      }
+    ]
+  }
+}

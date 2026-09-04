@@ -72,4 +72,23 @@ describe('processing-gtfs', () => {
     assert.deepEqual(datasets.map((d: any) => d.key).sort(), ['metadata', 'shapes', 'stop-times', 'stops'])
     for (const dataset of datasets) assert.ok(dataset.id, `${dataset.key} doit avoir un identifiant`)
   })
+
+  // Needs a real data-fair (for the test context), the SFTP container, and access
+  // to the public transport-validator instance.
+  it('valide une archive sans produire de jeu de données', { skip: !config?.dataFairUrl }, async () => {
+    const context = testUtils.context({
+      processingConfig: {
+        mode: 'validate',
+        url: 'sftp://localhost:2222/upload/gtfs-gp.zip',
+        username: 'test'
+      },
+      secrets: { password: 'testmotdepasse' }
+    }, config, false)
+
+    await gtfsProcessing.run(context as any)
+
+    // aucun patchConfig : aucun jeu créé, datasetMode reste indéfini
+    assert.equal(context.processingConfig.datasetMode, undefined)
+    assert.equal((context.processingConfig as any).datasets, undefined)
+  })
 })

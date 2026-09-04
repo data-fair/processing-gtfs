@@ -2,7 +2,8 @@ import type { ProcessingContext } from '@data-fair/lib-common-types/processings.
 import type { ProcessingConfig } from '#types/processingConfig/index.ts'
 import path from 'node:path'
 import fs from 'fs-extra'
-import { download } from './download.ts'
+import { extractZip, fetchZip } from './download.ts'
+import { DEFAULT_VALIDATOR_URL, logValidation, summarize, validateZip } from './validate.ts'
 import { hasFile, loadCalendar, loadRoutes, loadStops, loadTrips, type Reference } from './gtfs/read.ts'
 import { buildStopTimesIndex, writeStopTimes } from './gtfs/stop-times.ts'
 import { writeStops } from './gtfs/stops.ts'
@@ -22,8 +23,13 @@ import {
 } from './upload.ts'
 
 let shouldBeStopped = false
+let validateController: AbortController | undefined
 
-export const stop = async () => { shouldBeStopped = true }
+export const stop = async () => {
+  shouldBeStopped = true
+  // abort an in-flight validation request so stop does not wait for the timeout
+  validateController?.abort()
+}
 
 const throwIfStopped = () => {
   if (shouldBeStopped) throw new Error('Traitement interrompu.')
@@ -114,6 +120,44 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
     sshKey: secrets?.sshKey ?? config.sshKey
   }
 
+  const mode = config.mode ?? 'import'
+  const zipPath = await fetchZip(config.url, credentials, tmpDir, axios, log)
+  throwIfStopped()
+
+  // validate mode: the summary is the whole result, nothing else is produced.
+  // import mode: the validation is optional and, with failOnError, blocks the import.
+  if (mode === 'validate' || config.validationEnabled !== false) {
+    await log.step('Validation GTFS')
+    validateController = new AbortController()
+    let result
+    try {
+      result = await validateZip(zipPath, {
+        validatorUrl: config.validatorUrl ?? DEFAULT_VALIDATOR_URL,
+        maxIssues: config.maxIssues
+      }, validateController.signal)
+    } catch (err: any) {
+      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') throw new Error('Traitement interrompu.')
+      throw err
+    } finally {
+      validateController = undefined
+    }
+    throwIfStopped()
+
+    const summary = summarize(result)
+    await logValidation(result, summary, log)
+
+    if (mode === 'validate') {
+      if (summary.counts.Fatal > 0) {
+        throw new Error(`Archive GTFS inexploitable : ${summary.counts.Fatal} anomalie(s) fatale(s).`)
+      }
+      await log.info('Validation terminée.')
+      return
+    }
+    if (config.failOnError && (summary.counts.Fatal > 0 || summary.counts.Error > 0)) {
+      throw new Error(`L'archive contient des anomalies bloquantes (${summary.counts.Fatal} fatale(s), ${summary.counts.Error} erreur(s)) : import interrompu (option « échouer sur anomalies » active).`)
+    }
+  }
+
   const create = config.datasetMode === 'create'
   const configuredRefs = create
     ? []
@@ -124,7 +168,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   await log.step('Configuration')
   await log.info(`Jeux de données à produire : ${wanted.map(k => RESOURCE_TITLES[k]).join(', ')}`)
 
-  const { zipPath, gtfsDir } = await download(config.url, credentials, tmpDir, axios, log)
+  const gtfsDir = await extractZip(zipPath, tmpDir, log)
   throwIfStopped()
 
   const dataKeys = DATA_KEYS.filter(key => wanted.includes(key))

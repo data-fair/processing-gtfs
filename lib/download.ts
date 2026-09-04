@@ -5,20 +5,27 @@ import fs from 'fs-extra'
 import { fetchFile, type SourceCredentials } from './fetch.ts'
 import { runCommand } from './spawn-process.ts'
 
-export interface DownloadResult {
-  /** the archive itself, kept so it can be attached to the metadata dataset */
-  zipPath: string
-  /** flat directory holding the GTFS .txt files */
-  gtfsDir: string
+export const displayBytes = (size: number) => {
+  const units = [[1, 'octets'], [1e3, 'ko'], [1e6, 'Mo'], [1e9, 'Go'], [1e12, 'To']] as const
+  const abs = Math.abs(size)
+  if (abs === 0) return '0 octets'
+  for (let i = units.length - 1; i >= 0; i--) {
+    if (abs >= units[i][0]) return (abs / units[i][0]).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' ' + units[i][1]
+  }
+  return `${abs} octets`
 }
 
-export const download = async (
+/**
+ * Download the source archive (HTTP, HTTPS, FTP, FTPS or SFTP) into tmpDir.
+ * Returns the path of the downloaded zip, without extracting it.
+ */
+export const fetchZip = async (
   rawUrl: string,
   credentials: SourceCredentials,
   tmpDir: string,
   axios: AxiosInstance,
   log: LogFunctions
-): Promise<DownloadResult> => {
+): Promise<string> => {
   const url = new URL(rawUrl)
   await log.step('Téléchargement de l\'archive GTFS')
   await log.info(`Source : ${url.origin}${url.pathname}`)
@@ -38,7 +45,13 @@ export const download = async (
 
   const { size } = await fs.stat(zipPath)
   await log.info(`Archive téléchargée (${displayBytes(size)})`)
+  return zipPath
+}
 
+/**
+ * Extract the archive into a flat directory holding the GTFS .txt files.
+ */
+export const extractZip = async (zipPath: string, tmpDir: string, log: LogFunctions): Promise<string> => {
   const gtfsDir = path.join(tmpDir, 'gtfs')
   await fs.ensureDir(gtfsDir)
   // -j flattens: some feeds nest their .txt files in a folder inside the archive
@@ -47,16 +60,5 @@ export const download = async (
   const files = (await fs.readdir(gtfsDir)).filter(f => f.endsWith('.txt'))
   if (!files.length) throw new Error('L\'archive ne contient aucun fichier GTFS (.txt).')
   await log.info(`Fichiers GTFS extraits : ${files.sort().join(', ')}`)
-
-  return { zipPath, gtfsDir }
-}
-
-export const displayBytes = (size: number) => {
-  const units = [[1, 'octets'], [1e3, 'ko'], [1e6, 'Mo'], [1e9, 'Go'], [1e12, 'To']] as const
-  const abs = Math.abs(size)
-  if (abs === 0) return '0 octets'
-  for (let i = units.length - 1; i >= 0; i--) {
-    if (abs >= units[i][0]) return (abs / units[i][0]).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' ' + units[i][1]
-  }
-  return `${abs} octets`
+  return gtfsDir
 }

@@ -15,6 +15,24 @@ jusqu'à quatre jeux de données, chacun activable indépendamment :
 Les jeux produits sont reliés entre eux par `relatedDatasets`, et ces liens sont
 rafraîchis à chaque exécution.
 
+## Mode validation
+
+Le mode « Valider uniquement l'archive » envoie le zip à un service compatible
+[transport-validator](https://github.com/etalab/transport-validator) (l'outil de
+transport.data.gouv.fr) et écrit le résumé dans le journal du traitement : anomalies
+par sévérité, période de validité, réseaux et modes. Aucun jeu de données n'est
+produit, l'archive n'est même pas dézippée.
+
+Des anomalies fatales (archive inexploitable) font échouer l'exécution. En mode
+import, la validation avant import est activable (`validationEnabled`, activée par
+défaut) et peut bloquer le traitement en cas d'anomalies (`failOnError`).
+
+Par défaut, l'instance publique `https://validation.transport.data.gouv.fr/validate`
+est utilisée : endpoint non documenté, sans authentification ni SLA, l'archive lui
+est envoyée en clair dans le corps de la requête. C'est acceptable car c'est la
+destination finale prévue de la donnée, mais un auto-hébergement du validateur
+(`validatorUrl`) reste possible.
+
 ## Développement
 
 ```sh
