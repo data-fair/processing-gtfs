@@ -120,11 +120,12 @@
         "url": {
           "type": "string",
           "title": "URL d'accès à l'archive GTFS",
-          "description": "Les protocoles supportés sont HTTP, HTTPS et SFTP."
+          "description": "Les protocoles supportés sont HTTP, HTTPS, FTP, FTPS et SFTP. Le FTPS implicite utilise le port 990, sinon le FTPS explicite s'applique. Seul le mode passif est supporté pour FTP/FTPS."
         },
         "username": {
           "type": "string",
           "title": "Utilisateur",
+          "description": "Laissez vide pour un accès FTP anonyme.",
           "layout": {
             "props": {
               "autocomplete": "suppress"
@@ -146,6 +147,7 @@
           "title": "Clé privée SSH",
           "description": "Alternative au mot de passe pour une source SFTP.",
           "layout": {
+            "if": "parent.data.url && parent.data.url.startsWith('sftp:')",
             "props": {
               "type": "password",
               "autocomplete": "suppress"

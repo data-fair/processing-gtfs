@@ -33,6 +33,7 @@
   },
   "homepage": "https://github.com/data-fair/processing-gtfs#readme",
   "dependencies": {
+    "basic-ftp": "^6.2.1",
     "csv": "^6.3.6",
     "form-data": "^4.0.0",
     "fs-extra": "^11.3.0",

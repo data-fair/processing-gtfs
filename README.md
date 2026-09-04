@@ -2,7 +2,7 @@
 
 Charge une archive GTFS dans data-fair.
 
-Le traitement télécharge un zip GTFS (HTTP, HTTPS ou SFTP), le convertit, et alimente
+Le traitement télécharge un zip GTFS (HTTP, HTTPS, FTP, FTPS ou SFTP), le convertit, et alimente
 jusqu'à quatre jeux de données, chacun activable indépendamment :
 
 | Jeu | Contenu |
@@ -39,6 +39,14 @@ Le test SFTP a besoin du conteneur fourni :
 ```sh
 docker compose up -d
 ```
+
+FTP / FTPS : seul le mode passif est supporté (limite de `basic-ftp`, pas de mode actif).
+Le FTPS sur le port 990 utilise le TLS implicite, sinon le TLS explicite.
+La vérification des certificats reste stricte : un certificat auto-signé fait échouer
+le téléchargement. Le FTP en clair fait transiter les identifiants sans chiffrement :
+préférez FTPS ou SFTP quand c'est possible. Sans utilisateur, l'accès FTP est anonyme.
+Le conteneur `ftp` de `docker compose up -d` expose `ftp://localhost:2121/upload/gtfs-gp.zip`
+(login `test` / `testmotdepasse`).
 
 ## Publication
 

@@ -49,4 +49,27 @@ describe('processing-gtfs', () => {
     assert.deepEqual(datasets.map((d: any) => d.key).sort(), ['metadata', 'shapes', 'stop-times', 'stops'])
     for (const dataset of datasets) assert.ok(dataset.id, `${dataset.key} doit avoir un identifiant`)
   })
+
+  // Needs a real data-fair and the FTP container from docker-compose.yml.
+  it('crée les jeux de données demandés depuis FTP', { skip: !config?.dataFairUrl }, async () => {
+    const context = testUtils.context({
+      processingConfig: {
+        datasetMode: 'create',
+        datasetTitle: 'GTFS Test FTP',
+        resources: { metadata: true, stops: true, stopTimes: true, shapes: true },
+        url: 'ftp://localhost:2121/upload/gtfs-gp.zip',
+        username: 'test',
+        downloadZip: true
+      },
+      secrets: { password: 'testmotdepasse' }
+    }, config, false)
+
+    await gtfsProcessing.run(context as any)
+
+    const datasets = (context.processingConfig as any).datasets
+    assert.equal(context.processingConfig.datasetMode, 'update')
+    assert.equal(datasets.length, 4)
+    assert.deepEqual(datasets.map((d: any) => d.key).sort(), ['metadata', 'shapes', 'stop-times', 'stops'])
+    for (const dataset of datasets) assert.ok(dataset.id, `${dataset.key} doit avoir un identifiant`)
+  })
 })

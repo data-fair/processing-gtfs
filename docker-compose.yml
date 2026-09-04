@@ -9,3 +9,17 @@ services:
       - "2222:22"
     environment:
       - USERS=test:testmotdepasse:1001:100
+  # Plain FTP (passive mode only, as supported by basic-ftp).
+  # Same fixture dir as SFTP: ftp://localhost:2121/upload/gtfs-gp.zip
+  ftp:
+    image: stilliard/pure-ftpd:latest
+    volumes:
+      - ./sftp-test:/home/test/upload
+    ports:
+      - "2121:21"
+      - "30000-30009:30000-30009"
+    environment:
+      PUBLICHOST: localhost
+      FTP_USER_NAME: test
+      FTP_USER_PASS: testmotdepasse
+      FTP_USER_HOME: /home/test

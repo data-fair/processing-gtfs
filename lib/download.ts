@@ -22,6 +22,9 @@ export const download = async (
   const url = new URL(rawUrl)
   await log.step('Téléchargement de l\'archive GTFS')
   await log.info(`Source : ${url.origin}${url.pathname}`)
+  if (url.protocol === 'ftp:') {
+    await log.warning('FTP en clair : les identifiants transitent sans chiffrement, préférez FTPS ou SFTP quand c\'est possible.')
+  }
 
   const zipPath = path.join(tmpDir, 'gtfs.zip')
   await fs.ensureDir(tmpDir)
