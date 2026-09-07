@@ -76,36 +76,6 @@ describe('migration depuis la configuration héritée', () => {
     assert.equal(patches.length, 0)
   })
 
-  it('convertit la liste de jeux de données en un jeu par rôle', async () => {
-    const config: any = {
-      datasetMode: 'update',
-      datasets: [
-        { key: 'stops', id: 'kiceo-stops', title: 'Kicéo - stops' },
-        { key: 'metadata', id: 'kiceo', title: 'Kicéo' },
-        // un rôle sans identifiant ne survit pas à la conversion
-        { key: 'shapes' }
-      ]
-    }
-    const patches: any[] = []
-    // aucun appel réseau : les identifiants sont déjà là, rien à retrouver
-    const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
-
-    assert.deepEqual(refs?.map(r => r.key), ['metadata', 'stops'])
-    assert.equal(patches.length, 1)
-    assert.deepEqual(patches[0].datasets, {
-      metadata: { id: 'kiceo', title: 'Kicéo' },
-      stops: { id: 'kiceo-stops', title: 'Kicéo - stops' }
-    })
-  })
-
-  it('ignore une liste de jeux de données vide plutôt que de la migrer', async () => {
-    const config: any = { datasetMode: 'update', datasets: [] }
-    const patches: any[] = []
-    const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
-    assert.equal(refs, null)
-    assert.equal(patches.length, 0)
-  })
-
   it('ne fait rien sur une configuration neuve', async () => {
     const config: any = { datasetMode: 'create', datasetTitle: 'Neuf' }
     assert.equal(await migrateLegacyConfig(config, fakeAxios({}), noopLog, async () => {}), null)

@@ -86,9 +86,8 @@ const LEGACY_SUFFIXES: [ResourceKey, string][] = [
  * `dataset` property and the legacy `anyOf` branches of processing-config-schema.json,
  * which exist only so those configs stay valid until this function has run once.
  *
- * Adopt a config written by an older version. Two shapes are taken in:
- * - a single `dataset`, the others being derived by suffix;
- * - a `datasets` array of `{ key, id, title }`, replaced by an object keyed by role.
+ * Adopt a config written by an older version: a single `dataset`, the others being
+ * derived by suffix.
  *
  * Done here rather than in prepare: prepare receives no axios, so it could not check
  * that the derived ids exist and would rewrite the config blind. Every derived id is
@@ -100,14 +99,6 @@ export const migrateLegacyConfig = async (
   log: ProcessingContext['log'],
   patchConfig: ProcessingContext['patchConfig']
 ): Promise<DatasetRef[] | null> => {
-  if (Array.isArray(config.datasets)) {
-    const refs = refsFromConfig(Object.fromEntries(config.datasets.map((entry: any) => [entry?.key, entry])))
-    if (!refs.length) return null
-    await log.step('Migration de la configuration')
-    await log.warning('Configuration héritée : la liste des jeux de données est convertie en un jeu par rôle.')
-    await patchConfig({ datasetMode: 'update', datasets: datasetsFromRefs(refs) } as any)
-    return refs
-  }
   if (config.datasets || !config.dataset?.id) return null
 
   await log.step('Migration de la configuration')
