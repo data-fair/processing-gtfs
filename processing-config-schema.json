@@ -30,8 +30,7 @@
           "layout": {
             "props": {
               "type": "password",
-              "autocomplete": "suppress",
-              "name": "gtfs-source-password"
+              "autocomplete": "one-time-code"
             }
           }
         },
@@ -43,8 +42,7 @@
             "if": "parent.data.url && parent.data.url.startsWith('sftp:')",
             "props": {
               "type": "password",
-              "autocomplete": "suppress",
-              "name": "gtfs-source-ssh-key"
+              "autocomplete": "one-time-code"
             }
           }
         }
