@@ -27,6 +27,11 @@ export const RESOURCE_FILES: Record<Exclude<ResourceKey, 'metadata'>, string> = 
   shapes: 'shapes.geojson'
 }
 
+// The two concepts that make the produced datasets joinable, taken from the standard
+// data-fair vocabulary (which carries the Linked GTFS and Transmodel identifiers).
+const STOP = 'http://vocab.gtfs.org/terms#Stop'
+const ROUTE = 'http://vocab.gtfs.org/terms#Route'
+
 const LABEL = 'http://www.w3.org/2000/01/rdf-schema#label'
 const DESCRIPTION = 'http://schema.org/description'
 const GEOMETRY = 'https://purl.org/geojson/vocab#geometry'
@@ -177,26 +182,16 @@ const routeColor: SchemaProperty = {
   'x-refersTo': COLOR
 }
 
-export interface ConceptOverrides {
-  /** URI of a private-vocabulary concept identifying a stop, applied to stop_id */
-  stopConcept?: string
-  /** URI of a private-vocabulary concept identifying a route */
-  routeConcept?: string
-}
-
-const withConcept = (property: SchemaProperty, uri?: string): SchemaProperty =>
-  uri ? { ...property, 'x-refersTo': uri } : property
-
-export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<ResourceKey, 'metadata'>, SchemaProperty[]> => ({
+export const SCHEMAS: Record<Exclude<ResourceKey, 'metadata'>, SchemaProperty[]> = {
   stops: [
     geometry,
-    withConcept(id('stop_id', "Identifiant de l'arrêt"), concepts.stopConcept),
+    { ...id('stop_id', "Identifiant de l'arrêt"), 'x-refersTo': STOP },
     { key: 'stop_code', title: "Code de l'arrêt", description: 'Code court communiqué aux voyageurs.', type: 'string' },
     { key: 'stop_name', title: "Nom de l'arrêt", type: 'string', 'x-refersTo': LABEL },
     { key: 'stop_desc', title: "Description de l'arrêt", type: 'string', 'x-refersTo': DESCRIPTION },
     id('zone_id', 'Identifiant de la zone tarifaire'),
     { key: 'stop_url', title: "Page de l'arrêt", type: 'string', 'x-refersTo': WEB_PAGE },
-    withConcept({ key: 'routes', title: 'Lignes desservies', type: 'string', separator: ';' }, concepts.routeConcept),
+    { key: 'routes', title: 'Lignes desservies', type: 'string', separator: ';', 'x-refersTo': ROUTE },
     locationType,
     id('parent_station', 'Emplacement parent', "Identifiant de la station à laquelle l'emplacement appartient."),
     { key: 'stop_timezone', title: 'Fuseau horaire', description: "Hérité de l'emplacement parent lorsqu'il est vide.", type: 'string' },
@@ -206,12 +201,12 @@ export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<Re
     id('trip_id', 'Identifiant de la course'),
     { key: 'arrival_time', title: 'Arrivée', description: 'Peut dépasser 24:00:00 pour un service qui se poursuit après minuit.', type: 'string' },
     { key: 'departure_time', title: 'Départ', description: 'Peut dépasser 24:00:00 pour un service qui se poursuit après minuit.', type: 'string' },
-    withConcept(id('stop_id', "Identifiant de l'arrêt"), concepts.stopConcept),
+    { ...id('stop_id', "Identifiant de l'arrêt"), 'x-refersTo': STOP },
     { key: 'stop_name', title: "Nom de l'arrêt", type: 'string', 'x-refersTo': LABEL },
     { key: 'stop_sequence', title: "Rang de l'arrêt", description: 'Ordre de desserte au sein de la course.', type: 'integer', ignoreDetection: true },
     { key: 'stop_origin', title: 'Origine', description: 'Premier arrêt de la course.', type: 'string' },
     { key: 'stop_destination', title: 'Destination', description: 'Dernier arrêt de la course.', type: 'string' },
-    { key: 'route_name', title: 'Ligne', type: 'string' },
+    { key: 'route_name', title: 'Ligne', type: 'string', 'x-refersTo': ROUTE },
     routeColor,
     directionId,
     {
@@ -264,7 +259,7 @@ export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<Re
     geometry,
     id('shape_id', 'Identifiant du tracé'),
     id('route_id', 'Identifiant de la ligne'),
-    withConcept({ key: 'route_short_name', title: 'Nom court de la ligne', type: 'string' }, concepts.routeConcept),
+    { key: 'route_short_name', title: 'Nom court de la ligne', type: 'string', 'x-refersTo': ROUTE },
     { key: 'route_long_name', title: 'Nom complet de la ligne', type: 'string', 'x-refersTo': LABEL },
     { key: 'route_desc', title: 'Description de la ligne', type: 'string', 'x-refersTo': DESCRIPTION },
     routeType,
@@ -273,7 +268,7 @@ export const buildSchemas = (concepts: ConceptOverrides = {}): Record<Exclude<Re
     wheelchairBoarding,
     bikesAllowed
   ]
-})
+}
 
 /**
  * Properties data-fair considers innocuous, so they can be refreshed on an existing

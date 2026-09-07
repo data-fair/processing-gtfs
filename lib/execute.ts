@@ -8,7 +8,7 @@ import { hasFile, loadCalendar, loadRoutes, loadStops, loadTrips, type Reference
 import { buildStopTimesIndex, writeStopTimes } from './gtfs/stop-times.ts'
 import { writeStops } from './gtfs/stops.ts'
 import { writeShapes } from './gtfs/shapes.ts'
-import { RESOURCE_FILES, RESOURCE_TITLES, buildSchemas, type ResourceKey } from './schemas.ts'
+import { RESOURCE_FILES, RESOURCE_TITLES, SCHEMAS, type ResourceKey } from './schemas.ts'
 import {
   assertDatasetExists,
   createDataDataset,
@@ -218,7 +218,6 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   }
   throwIfStopped()
 
-  const schemas = buildSchemas({ stopConcept: config.stopConcept, routeConcept: config.routeConcept })
   const refs: DatasetRef[] = []
 
   if (create) {
@@ -229,7 +228,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       if (key === 'metadata') {
         refs.push(await createMetadataDataset(axios, title, log))
       } else {
-        refs.push(await createDataDataset(axios, key, title, produced.get(key)!, schemas[key], log))
+        refs.push(await createDataDataset(axios, key, title, produced.get(key)!, SCHEMAS[key], log))
       }
     }
     // recorded before anything else can fail: without this the next run would create
@@ -245,7 +244,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       const live = await assertDatasetExists(axios, ref)
       const resolved: DatasetRef = { ...ref, title: live.title || ref.title }
       if (ref.key !== 'metadata') {
-        await refreshSchemaLabels(axios, resolved, schemas[ref.key as Exclude<ResourceKey, 'metadata'>], live, log)
+        await refreshSchemaLabels(axios, resolved, SCHEMAS[ref.key as Exclude<ResourceKey, 'metadata'>], live, log)
         await uploadData(axios, resolved, produced.get(ref.key)!, log)
       }
       refs.push(resolved)

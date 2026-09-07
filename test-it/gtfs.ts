@@ -7,7 +7,7 @@ import { isoDate, loadCalendar, loadRoutes, loadStops, loadTrips, routeName, typ
 import { buildStopTimesIndex, writeStopTimes } from '../lib/gtfs/stop-times.ts'
 import { writeStops } from '../lib/gtfs/stops.ts'
 import { writeShapes } from '../lib/gtfs/shapes.ts'
-import { buildSchemas } from '../lib/schemas.ts'
+import { SCHEMAS } from '../lib/schemas.ts'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ALNUM = path.join(here, 'resources/alnum')
@@ -162,7 +162,7 @@ describe('tracés', () => {
 })
 
 describe('schémas de sortie', () => {
-  const schemas = buildSchemas()
+  const schemas = SCHEMAS
 
   // direction_id is deliberately absent: despite its name it is an enum, not an identifier
   const IDENTIFIERS = ['trip_id', 'stop_id', 'route_id', 'shape_id', 'zone_id', 'parent_station']
@@ -197,15 +197,15 @@ describe('schémas de sortie', () => {
     assert.equal(byKey.route_color['x-refersTo'], 'https://schema.org/color')
   })
 
-  it("n'ajoute les concepts privés que s'ils sont configurés", () => {
-    const base = Object.fromEntries(buildSchemas().stops.map(p => [p.key, p]))
-    assert.equal(base.stop_id['x-refersTo'], undefined)
-    const custom = buildSchemas({ stopConcept: 'arret', routeConcept: 'ligne-de-bus' })
-    const byKey = Object.fromEntries(custom.stops.map(p => [p.key, p]))
-    assert.equal(byKey.stop_id['x-refersTo'], 'arret')
-    assert.equal(byKey.routes['x-refersTo'], 'ligne-de-bus')
-    // le même concept d'arrêt doit être posé dans les horaires : c'est ce qui rend les deux jeux joignables
-    const stopTimes = Object.fromEntries(custom['stop-times'].map(p => [p.key, p]))
-    assert.equal(stopTimes.stop_id['x-refersTo'], 'arret')
+  it('pose les concepts arrêt et ligne du vocabulaire standard', () => {
+    const stops = Object.fromEntries(schemas.stops.map(p => [p.key, p]))
+    assert.equal(stops.stop_id['x-refersTo'], 'http://vocab.gtfs.org/terms#Stop')
+    assert.equal(stops.routes['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
+    // les mêmes concepts doivent être posés dans les horaires et les tracés : c'est ce qui rend les jeux joignables
+    const stopTimes = Object.fromEntries(schemas['stop-times'].map(p => [p.key, p]))
+    assert.equal(stopTimes.stop_id['x-refersTo'], 'http://vocab.gtfs.org/terms#Stop')
+    assert.equal(stopTimes.route_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
+    const shapes = Object.fromEntries(schemas.shapes.map(p => [p.key, p]))
+    assert.equal(shapes.route_short_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
   })
 })
