@@ -17,7 +17,8 @@
           "description": "Laissez vide pour un accès FTP anonyme.",
           "layout": {
             "props": {
-              "autocomplete": "suppress"
+              "autocomplete": "suppress",
+              "name": "gtfs-source-user"
             }
           }
         },
@@ -27,7 +28,8 @@
           "layout": {
             "props": {
               "type": "password",
-              "autocomplete": "suppress"
+              "autocomplete": "suppress",
+              "name": "gtfs-source-password"
             }
           }
         },
@@ -39,7 +41,8 @@
             "if": "parent.data.url && parent.data.url.startsWith('sftp:')",
             "props": {
               "type": "password",
-              "autocomplete": "suppress"
+              "autocomplete": "suppress",
+              "name": "gtfs-source-ssh-key"
             }
           }
         }
@@ -207,7 +210,7 @@
                       },
                       "layout": {
                         "getItems": {
-                          "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&${context.ownerFilter}&raw=true",
+                          "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
                           "qSearchParam": "q",
                           "itemsResults": "data.results",
                           "itemTitle": "item.title",
