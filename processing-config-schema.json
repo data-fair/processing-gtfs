@@ -451,6 +451,12 @@
                 "title": "Publier les fichiers sources comme fichier zip sur le jeu de métadonnées",
                 "description": "Sinon les fichiers sources seront publiés directement dézippés.",
                 "default": false
+              },
+              "realtimeUrl": {
+                "type": "string",
+                "title": "URL du flux GTFS-RT (VehiclePositions)",
+                "description": "Optionnel. Le flux est déclaré comme pièce jointe distante du jeu de métadonnées : les applications le téléchargent via le serveur data-fair, sans contrainte de CORS.",
+                "format": "uri"
               }
             }
           }

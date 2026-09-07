@@ -13,6 +13,8 @@ export interface DatasetRef {
   title: string
 }
 
+export const REALTIME_ATTACHMENT_NAME = 'gtfs-rt.protobuf'
+
 /** Axios hides the reason given by data-fair inside response.data; JSON.stringify(err) drops it. */
 export const describeError = (err: any) => {
   const detail = err.response?.data
@@ -151,6 +153,29 @@ export const uploadAttachments = async (axios: AxiosInstance, ref: DatasetRef, f
     } catch (err: any) {
       throw new Error(`Échec du chargement de la pièce jointe ${name} : ${describeError(err)}`)
     }
+  }
+}
+
+/**
+ * Declare the GTFS-RT feed as a remote metadata attachment: the URL is kept server-side
+ * by data-fair (in the attachment targets) and the content is proxied on download, so
+ * browser clients face neither CORS nor the raw feed URL.
+ */
+export const uploadRealtimeAttachment = async (axios: AxiosInstance, ref: DatasetRef, url: string, log: LogFunctions) => {
+  const name = REALTIME_ATTACHMENT_NAME
+  await log.info(`Déclaration du flux temps réel ${url} comme pièce jointe distante ${name}`)
+  try {
+    const dataset = (await axios.get(`api/v1/datasets/${ref.id}`)).data
+    const attachments = (dataset.attachments ?? []).filter((a: any) => a.name !== name)
+    attachments.push({
+      type: 'remoteFile',
+      name,
+      targetUrl: url,
+      title: 'Flux GTFS-RT (VehiclePositions)'
+    })
+    await axios.patch(`api/v1/datasets/${ref.id}`, { attachments })
+  } catch (err: any) {
+    throw new Error(`Échec de la déclaration de la pièce jointe distante ${name} : ${describeError(err)}`)
   }
 }
 

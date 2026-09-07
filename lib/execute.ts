@@ -19,6 +19,7 @@ import {
   syncRelatedDatasets,
   uploadAttachments,
   uploadData,
+  uploadRealtimeAttachment,
   type DatasetRef
 } from './upload.ts'
 
@@ -292,6 +293,9 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
       ? [zipPath]
       : (await fs.readdir(gtfsDir)).filter(f => f.endsWith('.txt')).sort().map(f => path.join(gtfsDir, f))
     await uploadAttachments(axios, metadataRef, attachments, log)
+    if (config.realtimeUrl) {
+      await uploadRealtimeAttachment(axios, metadataRef, config.realtimeUrl, log)
+    }
   }
   throwIfStopped()
 
