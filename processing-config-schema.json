@@ -243,115 +243,98 @@
                     "const": "update"
                   },
                   "datasets": {
-                    "type": "object",
+                    "type": "array",
                     "title": "Jeux de données à mettre à jour",
-                    "description": "Un jeu par rôle. Laisser un rôle vide cesse de produire la donnée correspondante.",
-                    "properties": {
-                      "metadata": {
-                        "type": "object",
-                        "title": "Métadonnées",
-                        "description": "Jeu sans données, porteur de l'archive ou des fichiers GTFS en pièces jointes.",
-                        "required": [
-                          "id"
-                        ],
-                        "layout": {
-                          "getItems": {
-                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
-                            "qSearchParam": "q",
-                            "itemsResults": "data.results",
-                            "itemTitle": "item.title",
-                            "itemKey": "item.id"
-                          }
-                        },
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "title": "Identifiant"
-                          },
-                          "title": {
-                            "type": "string",
-                            "title": "Titre"
-                          }
-                        }
+                    "description": "Une ligne par donnée produite. Laisser une ligne sans jeu de données cesse de produire la donnée correspondante.",
+                    "default": [
+                      {
+                        "resource": "metadata"
                       },
-                      "stops": {
-                        "type": "object",
-                        "title": "Arrêts",
-                        "description": "Un point par arrêt, avec les lignes qui le desservent.",
-                        "required": [
-                          "id"
-                        ],
-                        "layout": {
-                          "getItems": {
-                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
-                            "qSearchParam": "q",
-                            "itemsResults": "data.results",
-                            "itemTitle": "item.title",
-                            "itemKey": "item.id"
-                          }
-                        },
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "title": "Identifiant"
-                          },
-                          "title": {
-                            "type": "string",
-                            "title": "Titre"
-                          }
-                        }
+                      {
+                        "resource": "stops"
                       },
-                      "stop-times": {
-                        "type": "object",
-                        "title": "Horaires",
-                        "description": "Un passage par arrêt et par course, avec la période de validité.",
-                        "required": [
-                          "id"
-                        ],
-                        "layout": {
-                          "getItems": {
-                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
-                            "qSearchParam": "q",
-                            "itemsResults": "data.results",
-                            "itemTitle": "item.title",
-                            "itemKey": "item.id"
-                          }
-                        },
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "title": "Identifiant"
-                          },
-                          "title": {
-                            "type": "string",
-                            "title": "Titre"
-                          }
-                        }
+                      {
+                        "resource": "stop-times"
                       },
-                      "shapes": {
-                        "type": "object",
-                        "title": "Tracés",
-                        "description": "Un tracé par forme déclarée dans shapes.txt.",
-                        "required": [
-                          "id"
-                        ],
-                        "layout": {
-                          "getItems": {
-                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
-                            "qSearchParam": "q",
-                            "itemsResults": "data.results",
-                            "itemTitle": "item.title",
-                            "itemKey": "item.id"
+                      {
+                        "resource": "shapes"
+                      }
+                    ],
+                    "layout": {
+                      "listEditMode": "inline",
+                      "listActions": []
+                    },
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "resource"
+                      ],
+                      "layout": [
+                        {
+                          "children": [
+                            "resource"
+                          ],
+                          "cols": 4
+                        },
+                        {
+                          "children": [
+                            "dataset"
+                          ],
+                          "cols": 8
+                        }
+                      ],
+                      "properties": {
+                        "resource": {
+                          "type": "string",
+                          "title": "Donnée",
+                          "oneOf": [
+                            {
+                              "const": "metadata",
+                              "title": "Métadonnées"
+                            },
+                            {
+                              "const": "stops",
+                              "title": "Arrêts"
+                            },
+                            {
+                              "const": "stop-times",
+                              "title": "Horaires"
+                            },
+                            {
+                              "const": "shapes",
+                              "title": "Tracés"
+                            }
+                          ],
+                          "layout": {
+                            "props": {
+                              "readonly": true
+                            }
                           }
                         },
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "title": "Identifiant"
+                        "dataset": {
+                          "type": "object",
+                          "title": "Jeu de données existant",
+                          "required": [
+                            "id"
+                          ],
+                          "layout": {
+                            "getItems": {
+                              "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
+                              "qSearchParam": "q",
+                              "itemsResults": "data.results",
+                              "itemTitle": "item.title",
+                              "itemKey": "item.id"
+                            }
                           },
-                          "title": {
-                            "type": "string",
-                            "title": "Titre"
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "title": "Identifiant"
+                            },
+                            "title": {
+                              "type": "string",
+                              "title": "Titre"
+                            }
                           }
                         }
                       }
@@ -362,12 +345,7 @@
                   {
                     "required": [
                       "datasets"
-                    ],
-                    "properties": {
-                      "datasets": {
-                        "minProperties": 1
-                      }
-                    }
+                    ]
                   },
                   {
                     "deprecated": true,
@@ -386,7 +364,7 @@
                   }
                 ],
                 "errorMessage": {
-                  "anyOf": "Renseignez au moins un rôle à mettre à jour."
+                  "anyOf": "Renseignez au moins un jeu de données à mettre à jour."
                 }
               }
             ]
@@ -427,14 +405,20 @@
                     ],
                     "properties": {
                       "datasets": {
-                        "required": [
-                          "metadata"
-                        ],
-                        "properties": {
-                          "metadata": {
-                            "required": [
-                              "id"
-                            ]
+                        "contains": {
+                          "required": [
+                            "resource",
+                            "dataset"
+                          ],
+                          "properties": {
+                            "resource": {
+                              "const": "metadata"
+                            },
+                            "dataset": {
+                              "required": [
+                                "id"
+                              ]
+                            }
                           }
                         }
                       }

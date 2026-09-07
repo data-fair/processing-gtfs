@@ -49,13 +49,21 @@ export const wantedFromResources = (resources: any): ResourceKey[] => {
   return RESOURCE_KEYS.filter(key => selected.includes(key))
 }
 
-/** One entry per role, empty roles left out; the config object is unordered, RESOURCE_KEYS is not. */
-const refsFromConfig = (datasets: any): DatasetRef[] => {
+/**
+ * One entry per role, kept in RESOURCE_KEYS order and roles without a dataset left out.
+ *
+ * `[{ resource, dataset: { id, title } }]` is the shape the platform reads to list the
+ * datasets a processing feeds: processings looks for a `dataset` object, either at the
+ * root of the configuration or inside each entry of a `datasets` array.
+ */
+export const refsFromConfig = (datasets: any): DatasetRef[] => {
+  const entries: any[] = Array.isArray(datasets) ? datasets : []
+  const byKey: Record<string, any> = Object.fromEntries(entries.map(entry => [entry?.resource, entry?.dataset]))
   const refs: DatasetRef[] = []
   for (const key of RESOURCE_KEYS) {
-    const entry = datasets?.[key]
-    if (!entry?.id) continue
-    refs.push({ key, id: entry.id, title: entry.title || entry.id })
+    const dataset = byKey[key]
+    if (!dataset?.id) continue
+    refs.push({ key, id: dataset.id, title: dataset.title || dataset.id })
   }
   return refs
 }
@@ -67,8 +75,16 @@ const refsFromConfig = (datasets: any): DatasetRef[] => {
  */
 export const baseDatasetTitle = (config: any) => config.datasetTitle || config.dataset?.title || 'GTFS'
 
-const datasetsFromRefs = (refs: DatasetRef[]) =>
-  Object.fromEntries(refs.map(ref => [ref.key, { id: ref.id, title: ref.title }]))
+/**
+ * One line per role, the dataset filled only for the roles actually produced.
+ *
+ * The form neither adds nor removes lines: the configuration carries them all, and a
+ * line left without a dataset is a role this processing does not produce.
+ */
+export const datasetsFromRefs = (refs: DatasetRef[]) => {
+  const byKey = Object.fromEntries(refs.map(ref => [ref.key, { id: ref.id, title: ref.title }]))
+  return RESOURCE_KEYS.map(key => byKey[key] ? { resource: key, dataset: byKey[key] } : { resource: key })
+}
 
 /**
  * @deprecated v0.3.10 compatibility, drop with the next major.
@@ -99,7 +115,9 @@ export const migrateLegacyConfig = async (
   log: ProcessingContext['log'],
   patchConfig: ProcessingContext['patchConfig']
 ): Promise<DatasetRef[] | null> => {
-  if (config.datasets || !config.dataset?.id) return null
+  // the form fills `datasets` with one empty line per role as soon as it is opened, so
+  // the presence of the list says nothing: what matters is whether a line carries a jeu
+  if (refsFromConfig(config.datasets).length || !config.dataset?.id) return null
 
   await log.step('Migration de la configuration')
   await log.warning("Configuration héritée de la version précédente : les jeux de données sont retrouvés à partir de l'identifiant du jeu de métadonnées.")

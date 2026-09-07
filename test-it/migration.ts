@@ -47,8 +47,8 @@ describe('migration depuis la configuration héritée', () => {
     assert.equal(refs?.[1].title, 'Kicéo - stops')
     assert.equal(patches.length, 1)
     assert.equal(patches[0].datasetMode, 'update')
-    assert.deepEqual(Object.keys(patches[0].datasets), ['metadata', 'stops', 'stop-times', 'shapes'])
-    assert.deepEqual(patches[0].datasets.stops, { id: 'kiceo-stops', title: 'Kicéo - stops' })
+    assert.deepEqual(patches[0].datasets.map((entry: any) => entry.resource), ['metadata', 'stops', 'stop-times', 'shapes'])
+    assert.deepEqual(patches[0].datasets[1], { resource: 'stops', dataset: { id: 'kiceo-stops', title: 'Kicéo - stops' } })
   })
 
   it('ignore les jeux qui n\'existent plus au lieu de les inventer', async () => {
@@ -68,8 +68,24 @@ describe('migration depuis la configuration héritée', () => {
     )
   })
 
+  it('reprend une configuration héritée que le formulaire a garnie de lignes vides', async () => {
+    // ouvrir le formulaire pose une ligne par rôle, sans jeu : la reprise doit avoir lieu
+    const config: any = {
+      datasetMode: 'update',
+      dataset: { id: 'kiceo' },
+      datasets: [{ resource: 'metadata' }, { resource: 'stops' }, { resource: 'stop-times' }, { resource: 'shapes' }]
+    }
+    const axios = fakeAxios({ kiceo: 'Kicéo', 'kiceo-stops': 'Kicéo - stops' })
+    const patches: any[] = []
+
+    const refs = await migrateLegacyConfig(config, axios, noopLog, async (p: any) => { patches.push(p) })
+
+    assert.deepEqual(refs?.map(r => r.key), ['metadata', 'stops'])
+    assert.equal(patches.length, 1)
+  })
+
   it('ne touche pas à une configuration déjà migrée', async () => {
-    const config: any = { datasetMode: 'update', datasets: { stops: { id: 'x' } }, dataset: { id: 'kiceo' } }
+    const config: any = { datasetMode: 'update', datasets: [{ resource: 'stops', dataset: { id: 'x' } }], dataset: { id: 'kiceo' } }
     const patches: any[] = []
     const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
     assert.equal(refs, null)
