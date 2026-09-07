@@ -4,7 +4,9 @@
   "allOf": [
     {
       "title": "Source",
-      "required": ["url"],
+      "required": [
+        "url"
+      ],
       "properties": {
         "url": {
           "type": "string",
@@ -57,8 +59,14 @@
           "description": "« Valider uniquement » contrôle l'archive et écrit le résumé dans le journal, sans produire de jeu de données. « Importer » conserve le comportement habituel.",
           "default": "import",
           "oneOf": [
-            { "const": "import", "title": "Importer les données dans des jeux de données" },
-            { "const": "validate", "title": "Valider uniquement l'archive" }
+            {
+              "const": "import",
+              "title": "Importer les données dans des jeux de données"
+            },
+            {
+              "const": "validate",
+              "title": "Valider uniquement l'archive"
+            }
           ]
         },
         "validationEnabled": {
@@ -101,127 +109,290 @@
     },
     {
       "title": "Jeux de données",
-      "default": {
-        "datasetMode": "create"
-      },
       "layout": {
         "if": "rootData.mode !== 'validate'"
+      },
+      "properties": {
+        "datasetMode": {
+          "type": "string",
+          "default": "create",
+          "layout": "none"
+        },
+        "dataset": {
+          "deprecated": true,
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "DEPRECATED — compatibilité v0.3.10, à retirer à la prochaine majeure. Jeu de métadonnées unique de la version publiée, repris au premier lancement par migrateLegacyConfig puis laissé à null. Déclaré uniquement pour que le formulaire ne le supprime pas (removeAdditional) avant que la reprise ait eu lieu.",
+          "layout": "none",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          }
+        }
       },
       "allOf": [
         {
           "if": {
-            "not": {
-              "required": ["mode"],
-              "properties": {
-                "mode": { "const": "validate" }
+            "properties": {
+              "mode": {
+                "not": {
+                  "const": "validate"
+                }
               }
             }
           },
           "then": {
+            "discriminator": {
+              "propertyName": "datasetMode"
+            },
+            "oneOfLayout": {
+              "label": "Action"
+            },
             "oneOf": [
               {
                 "title": "Créer les jeux de données",
-                "required": ["datasetTitle", "resources"],
+                "required": [
+                  "datasetMode"
+                ],
                 "properties": {
                   "datasetMode": {
                     "type": "string",
-                    "const": "create",
-                    "title": "Action"
+                    "const": "create"
                   },
                   "datasetTitle": {
                     "type": "string",
                     "title": "Titre de base des jeux de données",
-                    "description": "Chaque jeu créé porte ce titre suivi de son rôle, par exemple « Réseau Kicéo - arrêts »."
+                    "default": "GTFS",
+                    "description": "Chaque jeu créé porte ce titre suivi de son rôle, par exemple « GTFS - arrêts ». Les jeux ne sont créés qu'une fois : la configuration bascule ensuite en mise à jour."
                   },
                   "resources": {
-                    "type": "object",
+                    "type": "array",
                     "title": "Jeux de données à produire",
-                    "description": "Seules les données cochées sont lues dans l'archive GTFS.",
+                    "description": "Seules les données sélectionnées sont lues dans l'archive GTFS.",
+                    "default": [
+                      "metadata",
+                      "stops",
+                      "stop-times",
+                      "shapes"
+                    ],
+                    "uniqueItems": true,
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "oneOf": [
+                        {
+                          "const": "metadata",
+                          "title": "Métadonnées"
+                        },
+                        {
+                          "const": "stops",
+                          "title": "Arrêts"
+                        },
+                        {
+                          "const": "stop-times",
+                          "title": "Horaires"
+                        },
+                        {
+                          "const": "shapes",
+                          "title": "Tracés"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "datasetTitle"
+                    ]
+                  },
+                  {
+                    "deprecated": true,
+                    "description": "DEPRECATED — compatibilité v0.3.10, à retirer à la prochaine majeure. Reprise du titre imbriqué dans `dataset`, le temps que le premier lancement convertisse la configuration.",
+                    "required": [
+                      "dataset"
+                    ],
                     "properties": {
-                      "metadata": {
-                        "type": "boolean",
-                        "title": "Métadonnées",
-                        "description": "Jeu sans données, porteur de l'archive ou des fichiers GTFS en pièces jointes.",
-                        "default": true
-                      },
-                      "stops": {
-                        "type": "boolean",
-                        "title": "Arrêts",
-                        "description": "Un point par arrêt, avec les lignes qui le desservent.",
-                        "default": true
-                      },
-                      "stopTimes": {
-                        "type": "boolean",
-                        "title": "Horaires",
-                        "description": "Un passage par arrêt et par course, avec la période de validité.",
-                        "default": true
-                      },
-                      "shapes": {
-                        "type": "boolean",
-                        "title": "Tracés",
-                        "description": "Un tracé par forme déclarée dans shapes.txt.",
-                        "default": true
+                      "dataset": {
+                        "type": "object",
+                        "required": [
+                          "title"
+                        ]
                       }
                     }
                   }
+                ],
+                "errorMessage": {
+                  "anyOf": "Donnez un titre de base aux jeux de données à créer."
                 }
               },
               {
                 "title": "Mettre à jour les jeux de données",
-                "required": ["datasets"],
+                "required": [
+                  "datasetMode"
+                ],
                 "properties": {
                   "datasetMode": {
                     "type": "string",
                     "const": "update"
                   },
                   "datasets": {
-                    "type": "array",
+                    "type": "object",
                     "title": "Jeux de données à mettre à jour",
-                    "description": "Un jeu par rôle. Retirer une ligne cesse de produire la donnée correspondante.",
-                    "layout": {
-                      "comp": "list",
-                      "listEditMode": "inline",
-                      "messages": {
-                        "addItem": "Ajouter un jeu de données"
-                      }
-                    },
-                    "items": {
-                      "type": "object",
-                      "required": ["key", "id"],
-                      "properties": {
-                        "key": {
-                          "type": "string",
-                          "title": "Rôle",
-                          "oneOf": [
-                            { "const": "metadata", "title": "Métadonnées" },
-                            { "const": "stops", "title": "Arrêts" },
-                            { "const": "stop-times", "title": "Horaires" },
-                            { "const": "shapes", "title": "Tracés" }
-                          ]
+                    "description": "Un jeu par rôle. Laisser un rôle vide cesse de produire la donnée correspondante.",
+                    "properties": {
+                      "metadata": {
+                        "type": "object",
+                        "title": "Métadonnées",
+                        "description": "Jeu sans données, porteur de l'archive ou des fichiers GTFS en pièces jointes.",
+                        "required": [
+                          "id"
+                        ],
+                        "layout": {
+                          "getItems": {
+                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
+                            "qSearchParam": "q",
+                            "itemsResults": "data.results",
+                            "itemTitle": "item.title",
+                            "itemKey": "item.id"
+                          }
                         },
-                        "id": {
-                          "type": "string",
-                          "title": "Identifiant"
-                        },
-                        "title": {
-                          "type": "string",
-                          "title": "Titre"
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "title": "Identifiant"
+                          },
+                          "title": {
+                            "type": "string",
+                            "title": "Titre"
+                          }
                         }
                       },
-                      "layout": {
-                        "getItems": {
-                          "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
-                          "qSearchParam": "q",
-                          "itemsResults": "data.results",
-                          "itemTitle": "item.title",
-                          "itemKey": "item.id"
+                      "stops": {
+                        "type": "object",
+                        "title": "Arrêts",
+                        "description": "Un point par arrêt, avec les lignes qui le desservent.",
+                        "required": [
+                          "id"
+                        ],
+                        "layout": {
+                          "getItems": {
+                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
+                            "qSearchParam": "q",
+                            "itemsResults": "data.results",
+                            "itemTitle": "item.title",
+                            "itemKey": "item.id"
+                          }
+                        },
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "title": "Identifiant"
+                          },
+                          "title": {
+                            "type": "string",
+                            "title": "Titre"
+                          }
+                        }
+                      },
+                      "stop-times": {
+                        "type": "object",
+                        "title": "Horaires",
+                        "description": "Un passage par arrêt et par course, avec la période de validité.",
+                        "required": [
+                          "id"
+                        ],
+                        "layout": {
+                          "getItems": {
+                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
+                            "qSearchParam": "q",
+                            "itemsResults": "data.results",
+                            "itemTitle": "item.title",
+                            "itemKey": "item.id"
+                          }
+                        },
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "title": "Identifiant"
+                          },
+                          "title": {
+                            "type": "string",
+                            "title": "Titre"
+                          }
+                        }
+                      },
+                      "shapes": {
+                        "type": "object",
+                        "title": "Tracés",
+                        "description": "Un tracé par forme déclarée dans shapes.txt.",
+                        "required": [
+                          "id"
+                        ],
+                        "layout": {
+                          "getItems": {
+                            "url": "${context.dataFairUrl}/api/v1/datasets?select=id,title&size=50&${context.ownerFilter}&raw=true",
+                            "qSearchParam": "q",
+                            "itemsResults": "data.results",
+                            "itemTitle": "item.title",
+                            "itemKey": "item.id"
+                          }
+                        },
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "title": "Identifiant"
+                          },
+                          "title": {
+                            "type": "string",
+                            "title": "Titre"
+                          }
                         }
                       }
                     }
                   }
+                },
+                "anyOf": [
+                  {
+                    "required": [
+                      "datasets"
+                    ],
+                    "properties": {
+                      "datasets": {
+                        "minProperties": 1
+                      }
+                    }
+                  },
+                  {
+                    "deprecated": true,
+                    "description": "DEPRECATED — compatibilité v0.3.10, à retirer à la prochaine majeure. Reprise du jeu de métadonnées unique `dataset`, le temps que le premier lancement convertisse la configuration.",
+                    "required": [
+                      "dataset"
+                    ],
+                    "properties": {
+                      "dataset": {
+                        "type": "object",
+                        "required": [
+                          "id"
+                        ]
+                      }
+                    }
+                  }
+                ],
+                "errorMessage": {
+                  "anyOf": "Renseignez au moins un rôle à mettre à jour."
                 }
               }
             ]
+          },
+          "errorMessage": {
+            "if": "Complétez la configuration des jeux de données."
           }
         },
         {
@@ -229,30 +400,41 @@
             "allOf": [
               {
                 "properties": {
-                  "mode": { "not": { "const": "validate" } }
+                  "mode": {
+                    "not": {
+                      "const": "validate"
+                    }
+                  }
                 }
               },
               {
                 "anyOf": [
                   {
-                    "required": ["resources"],
+                    "required": [
+                      "resources"
+                    ],
                     "properties": {
                       "resources": {
-                        "required": ["metadata"],
-                        "properties": {
-                          "metadata": { "const": true }
+                        "contains": {
+                          "const": "metadata"
                         }
                       }
                     }
                   },
                   {
-                    "required": ["datasets"],
+                    "required": [
+                      "datasets"
+                    ],
                     "properties": {
                       "datasets": {
-                        "contains": {
-                          "required": ["key"],
-                          "properties": {
-                            "key": { "const": "metadata" }
+                        "required": [
+                          "metadata"
+                        ],
+                        "properties": {
+                          "metadata": {
+                            "required": [
+                              "id"
+                            ]
                           }
                         }
                       }

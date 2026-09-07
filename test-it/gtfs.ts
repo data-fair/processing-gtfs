@@ -3,7 +3,7 @@ import { describe, it, before, after } from 'node:test'
 import path from 'node:path'
 import fs from 'fs-extra'
 import { fileURLToPath } from 'node:url'
-import { isoDate, loadCalendar, loadRoutes, loadStops, loadTrips, routeName, type Reference } from '../lib/gtfs/read.ts'
+import { formatGtfsTime, isoDate, loadCalendar, loadFrequencies, loadRoutes, loadStops, loadTrips, parseGtfsTime, routeName, weekDayIndex, type Reference } from '../lib/gtfs/read.ts'
 import { buildStopTimesIndex, writeStopTimes } from '../lib/gtfs/stop-times.ts'
 import { writeStops } from '../lib/gtfs/stops.ts'
 import { writeShapes } from '../lib/gtfs/shapes.ts'
@@ -12,6 +12,7 @@ import { SCHEMAS } from '../lib/schemas.ts'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ALNUM = path.join(here, 'resources/alnum')
 const MIDNIGHT = path.join(here, 'resources/midnight')
+const FREQUENCIES = path.join(here, 'resources/frequencies')
 const OUT = path.join(here, '../data/test-out')
 
 const noopLog: any = {
@@ -28,7 +29,8 @@ const loadReference = async (dir: string): Promise<Reference> => ({
   routes: await loadRoutes(dir),
   stops: await loadStops(dir),
   trips: await loadTrips(dir),
-  calendar: await loadCalendar(dir)
+  calendar: await loadCalendar(dir),
+  frequencies: await loadFrequencies(dir)
 })
 
 const readCsv = async (file: string) => {
@@ -79,7 +81,13 @@ describe('horaires', () => {
   it('résout origine et destination même si le fichier est en ordre inversé', async () => {
     const ref = await loadReference(ALNUM)
     const { tripEnds } = await buildStopTimesIndex(ALNUM, ref, { collectStopRoutes: false }, noopLog)
-    assert.deepEqual(tripEnds.get('TRIP-A1'), { origin: 'Gare routière', destination: 'Plage du Lido' })
+    // l'ancre du cadencement suit la même règle : le départ du premier arrêt en séquence,
+    // pas celui de la première ligne du fichier
+    assert.deepEqual(tripEnds.get('TRIP-A1'), {
+      origin: 'Gare routière',
+      destination: 'Plage du Lido',
+      anchor: 8 * 3600
+    })
   })
 
   it('collecte les lignes desservant chaque arrêt, sans doublon', async () => {
@@ -207,5 +215,118 @@ describe('schémas de sortie', () => {
     assert.equal(stopTimes.route_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
     const shapes = Object.fromEntries(schemas.shapes.map(p => [p.key, p]))
     assert.equal(shapes.route_short_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
+  })
+})
+
+describe('calendrier des services', () => {
+  it('situe une date GTFS dans la semaine, lundi en premier', () => {
+    assert.equal(weekDayIndex('20260706'), 0) // lundi
+    assert.equal(weekDayIndex('20260711'), 5) // samedi
+    assert.equal(weekDayIndex('20260712'), 6) // dimanche
+    assert.equal(weekDayIndex('pas une date'), undefined)
+  })
+
+  it('lit calendar.txt quand il est là', async () => {
+    const calendar = await loadCalendar(ALNUM)
+    assert.deepEqual(calendar.get('SERV-1'), {
+      week: 'Lundi;Mardi;Mercredi;Jeudi;Vendredi',
+      start_date: '2026-07-01',
+      end_date: '2026-08-31'
+    })
+  })
+
+  it('déduit la semaine et la période de calendar_dates.txt quand calendar.txt manque', async () => {
+    const calendar = await loadCalendar(FREQUENCIES)
+    // les deux dates ajoutées tombent un lundi et un samedi, la date retirée un mardi
+    assert.deepEqual(calendar.get('SERV-DATES'), {
+      week: 'Lundi;Samedi',
+      start_date: '2026-07-06',
+      end_date: '2026-07-11'
+    })
+  })
+
+  it("ne raccourcit pas un service parce qu'une journée est annulée", async () => {
+    const dir = path.join(OUT, 'exceptions')
+    await fs.ensureDir(dir)
+    await fs.writeFile(path.join(dir, 'calendar.txt'),
+      'service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date\n' +
+      'S1,1,1,1,1,1,0,0,20260701,20260831\n')
+    // un lundi férié retiré et un dimanche de renfort ajouté
+    await fs.writeFile(path.join(dir, 'calendar_dates.txt'),
+      'service_id,date,exception_type\nS1,20260713,2\nS1,20260906,1\n')
+
+    const calendar = await loadCalendar(dir)
+    assert.deepEqual(calendar.get('S1'), {
+      week: 'Lundi;Mardi;Mercredi;Jeudi;Vendredi;Dimanche',
+      start_date: '2026-07-01',
+      // le renfort du 6 septembre repousse la fin de validité
+      end_date: '2026-09-06'
+    })
+  })
+
+  it('avertit quand aucun des deux fichiers de calendrier n\'est présent', async () => {
+    const dir = path.join(OUT, 'sans-calendrier')
+    await fs.ensureDir(dir)
+    const warnings: string[] = []
+    const log: any = { ...noopLog, warning: async (msg: string) => { warnings.push(msg) } }
+
+    const calendar = await loadCalendar(dir, log)
+    assert.equal(calendar.size, 0)
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0], /calendar_dates.txt/)
+  })
+})
+
+describe('horaires cadencés', () => {
+  it('convertit les heures GTFS en secondes, au-delà de minuit', () => {
+    assert.equal(parseGtfsTime('06:00:00'), 21600)
+    assert.equal(parseGtfsTime('25:30:00'), 91800)
+    assert.equal(parseGtfsTime(''), undefined)
+    assert.equal(parseGtfsTime('6h'), undefined)
+    assert.equal(formatGtfsTime(21600), '06:00:00')
+    assert.equal(formatGtfsTime(91800), '25:30:00')
+  })
+
+  it('ignore une fenêtre sans intervalle exploitable', async () => {
+    const dir = path.join(OUT, 'frequences-vides')
+    await fs.ensureDir(dir)
+    await fs.writeFile(path.join(dir, 'frequencies.txt'),
+      'trip_id,start_time,end_time,headway_secs,exact_times\n' +
+      'T1,06:00:00,07:00:00,0,0\n' +
+      'T1,06:00:00,07:00:00,,0\n' +
+      'T2,pas une heure,07:00:00,600,0\n')
+
+    const frequencies = await loadFrequencies(dir)
+    assert.equal(frequencies.size, 0)
+  })
+
+  it('déploie chaque passage de référence sur toute la fenêtre de cadencement', async () => {
+    const ref = await loadReference(FREQUENCIES)
+    const index = await buildStopTimesIndex(FREQUENCIES, ref, { collectStopRoutes: false }, noopLog)
+    const out = path.join(OUT, 'stop_times_freq.csv')
+    await writeStopTimes(FREQUENCIES, ref, index.tripEnds, out, noopLog)
+    const rows = await readCsv(out)
+
+    // 2 arrêts x (3 départs de 6h à 6h30 + 1 départ à 7h) + les 2 arrêts du voyage fixe
+    assert.equal(rows.length, 10)
+
+    const first = rows.filter(r => r.trip_id === 'TRIP-FREQ' && r.stop_id === 'STOP_1')
+    assert.deepEqual(first.map(r => r.departure_time), ['06:00:00', '06:10:00', '06:20:00', '07:00:00'])
+
+    // le gabarit met 6 minutes entre les deux arrêts et repart 1 minute plus tard
+    const second = rows.filter(r => r.trip_id === 'TRIP-FREQ' && r.stop_id === 'STOP_2')
+    assert.deepEqual(second.map(r => r.arrival_time), ['06:06:00', '06:16:00', '06:26:00', '07:06:00'])
+    assert.deepEqual(second.map(r => r.departure_time), ['06:07:00', '06:17:00', '06:27:00', '07:07:00'])
+
+    // exact_times 0 : le véhicule tient l'intervalle, pas l'horloge
+    assert.deepEqual(first.map(r => r.timepoint), ['0', '0', '0', '1'])
+
+    // le voyage sans fenêtre de cadencement passe inchangé, minuit compris
+    const fixe = rows.filter(r => r.trip_id === 'TRIP-FIXE')
+    assert.deepEqual(fixe.map(r => r.arrival_time), ['23:50:00', '24:05:00'])
+
+    // la période de circulation vient bien de calendar_dates.txt
+    assert.equal(rows[0].week, 'Lundi;Samedi')
+    assert.equal(rows[0].start_date, '2026-07-06')
   })
 })

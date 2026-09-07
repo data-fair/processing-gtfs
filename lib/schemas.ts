@@ -13,6 +13,9 @@ export interface SchemaProperty {
 
 export type ResourceKey = 'metadata' | 'stops' | 'stop-times' | 'shapes'
 
+/** Every role, in the order the datasets are produced: the metadata one carries the others. */
+export const RESOURCE_KEYS: readonly ResourceKey[] = ['metadata', 'stops', 'stop-times', 'shapes']
+
 export const RESOURCE_TITLES: Record<ResourceKey, string> = {
   metadata: 'métadonnées',
   stops: 'arrêts',

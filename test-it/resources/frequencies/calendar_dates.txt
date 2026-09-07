@@ -1,0 +1,4 @@
+service_id,date,exception_type
+SERV-DATES,20260706,1
+SERV-DATES,20260711,1
+SERV-DATES,20260714,2

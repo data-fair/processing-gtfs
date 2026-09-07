@@ -1,3 +1,4 @@
+import type { LogFunctions } from '@data-fair/lib-common-types/processings.js'
 import path from 'node:path'
 import fs from 'fs-extra'
 import { parse } from 'csv'
@@ -72,17 +73,53 @@ export interface CalendarRef {
   end_date: string
 }
 
+/** One service window of frequencies.txt, in seconds since the start of the service day. */
+export interface FrequencyRef {
+  start: number
+  end: number
+  headway: number
+  exactTimes: boolean
+}
+
 export interface Reference {
   routes: Map<string, RouteRef>
   stops: Map<string, StopRef>
   trips: Map<string, TripRef>
   calendar: Map<string, CalendarRef>
+  frequencies: Map<string, FrequencyRef[]>
 }
 
 const WEEK_DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 /** GTFS dates are YYYYMMDD; data-fair wants ISO to type the column as a date. */
 export const isoDate = (value: string) => (value ?? '').replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3')
+
+/** Which day of the week a YYYYMMDD date falls on, Monday first to match WEEK_DAYS. */
+export const weekDayIndex = (value: string): number | undefined => {
+  const parts = /^(\d{4})(\d{2})(\d{2})$/.exec(value ?? '')
+  if (!parts) return undefined
+  const date = new Date(Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])))
+  if (Number.isNaN(date.getTime())) return undefined
+  return (date.getUTCDay() + 6) % 7
+}
+
+/**
+ * GTFS times are H:MM:SS counted from the start of the service day, so 25:30:00 is
+ * 1.30am the next day. Seconds are the only form arithmetic can be done in.
+ */
+export const parseGtfsTime = (value: string | undefined): number | undefined => {
+  const parts = /^(\d+):([0-5]\d):([0-5]\d)$/.exec((value ?? '').trim())
+  if (!parts) return undefined
+  return Number(parts[1]) * 3600 + Number(parts[2]) * 60 + Number(parts[3])
+}
+
+/** Back to H:MM:SS, keeping hours past 24 rather than wrapping them to the next day. */
+export const formatGtfsTime = (seconds: number): string => {
+  const sign = seconds < 0 ? '-' : ''
+  const abs = Math.abs(Math.round(seconds))
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${sign}${pad(Math.floor(abs / 3600))}:${pad(Math.floor((abs % 3600) / 60))}:${pad(abs % 60)}`
+}
 
 /**
  * Parse a coordinate, treating a missing value as missing.
@@ -152,16 +189,94 @@ export const loadTrips = async (dir: string): Promise<Map<string, TripRef>> => {
   return trips
 }
 
-export const loadCalendar = async (dir: string): Promise<Map<string, CalendarRef>> => {
-  if (!hasFile(dir, 'calendar.txt')) return new Map()
+interface ServiceSpan {
+  days: Set<number>
+  /** raw YYYYMMDD, which compares correctly as a string */
+  start?: string
+  end?: string
+}
+
+/**
+ * Days of operation and validity span of every service.
+ *
+ * calendar.txt is optional in the standard: a feed may define all of its services
+ * through calendar_dates.txt alone, and reading calendar.txt only left those with an
+ * empty week and no validity dates. An added date (exception_type 1) therefore brings
+ * in its own weekday and widens the span. A removed date (exception_type 2) is a
+ * single-day hole: it neither drops the weekday nor shortens the service, so a feed
+ * that cancels one Monday for a holiday still reads as running on Mondays.
+ */
+export const loadCalendar = async (dir: string, log?: LogFunctions): Promise<Map<string, CalendarRef>> => {
+  const spans = new Map<string, ServiceSpan>()
+  const spanOf = (serviceId: string) => {
+    let span = spans.get(serviceId)
+    if (!span) { span = { days: new Set() }; spans.set(serviceId, span) }
+    return span
+  }
+  const widen = (span: ServiceSpan, date: string) => {
+    if (!/^\d{8}$/.test(date ?? '')) return
+    if (!span.start || date < span.start) span.start = date
+    if (!span.end || date > span.end) span.end = date
+  }
+
+  const hasCalendar = hasFile(dir, 'calendar.txt')
+  if (hasCalendar) {
+    for await (const line of iterCsv(gtfsPath(dir, 'calendar.txt'))) {
+      const span = spanOf(line.service_id)
+      const days = [line.monday, line.tuesday, line.wednesday, line.thursday, line.friday, line.saturday, line.sunday]
+      days.forEach((day, i) => { if (day === '1') span.days.add(i) })
+      widen(span, line.start_date)
+      widen(span, line.end_date)
+    }
+  }
+
+  let addedDates = 0
+  const hasDates = hasFile(dir, 'calendar_dates.txt')
+  if (hasDates) {
+    for await (const line of iterCsv(gtfsPath(dir, 'calendar_dates.txt'))) {
+      if (line.exception_type !== '1') continue
+      const span = spanOf(line.service_id)
+      const day = weekDayIndex(line.date)
+      if (day !== undefined) span.days.add(day)
+      widen(span, line.date)
+      addedDates++
+    }
+  }
+
+  if (!hasCalendar && !hasDates) {
+    await log?.warning('Ni calendar.txt ni calendar_dates.txt : les jours de circulation et la période de validité des horaires resteront vides.')
+  } else if (!hasCalendar) {
+    await log?.info(`calendar.txt est absent : les jours de circulation sont déduits des ${addedDates} dates ajoutées par calendar_dates.txt.`)
+  }
+
   const calendar = new Map<string, CalendarRef>()
-  for await (const line of iterCsv(gtfsPath(dir, 'calendar.txt'))) {
-    const days = [line.monday, line.tuesday, line.wednesday, line.thursday, line.friday, line.saturday, line.sunday]
-    calendar.set(line.service_id, {
-      week: days.map((day, i) => day === '1' ? WEEK_DAYS[i] : null).filter(Boolean).join(';'),
-      start_date: isoDate(line.start_date),
-      end_date: isoDate(line.end_date)
+  for (const [serviceId, span] of spans) {
+    calendar.set(serviceId, {
+      week: [...span.days].sort((a, b) => a - b).map(day => WEEK_DAYS[day]).join(';'),
+      start_date: isoDate(span.start ?? ''),
+      end_date: isoDate(span.end ?? '')
     })
   }
   return calendar
+}
+
+/**
+ * The frequency windows of every trip that has some. A window with no usable headway
+ * describes nothing and would loop forever, so it is dropped rather than expanded.
+ */
+export const loadFrequencies = async (dir: string): Promise<Map<string, FrequencyRef[]>> => {
+  const frequencies = new Map<string, FrequencyRef[]>()
+  if (!hasFile(dir, 'frequencies.txt')) return frequencies
+  for await (const line of iterCsv(gtfsPath(dir, 'frequencies.txt'))) {
+    const start = parseGtfsTime(line.start_time)
+    const end = parseGtfsTime(line.end_time)
+    const headway = Number(line.headway_secs)
+    if (start === undefined || end === undefined || !Number.isFinite(headway) || headway <= 0) continue
+    const windows = frequencies.get(line.trip_id) ?? []
+    // exact_times 1 means the departures really are at those times, 0 that the vehicle
+    // only keeps the headway
+    windows.push({ start, end, headway, exactTimes: line.exact_times === '1' })
+    frequencies.set(line.trip_id, windows)
+  }
+  return frequencies
 }

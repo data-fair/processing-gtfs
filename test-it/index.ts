@@ -33,7 +33,7 @@ describe('processing-gtfs', () => {
       processingConfig: {
         datasetMode: 'create',
         datasetTitle: 'GTFS Test',
-        resources: { metadata: true, stops: true, stopTimes: true, shapes: true },
+        resources: ['metadata', 'stops', 'stop-times', 'shapes'],
         url: 'sftp://localhost:2222/upload/gtfs-gp.zip',
         username: 'test',
         downloadZip: true
@@ -45,9 +45,8 @@ describe('processing-gtfs', () => {
 
     const datasets = (context.processingConfig as any).datasets
     assert.equal(context.processingConfig.datasetMode, 'update')
-    assert.equal(datasets.length, 4)
-    assert.deepEqual(datasets.map((d: any) => d.key).sort(), ['metadata', 'shapes', 'stop-times', 'stops'])
-    for (const dataset of datasets) assert.ok(dataset.id, `${dataset.key} doit avoir un identifiant`)
+    assert.deepEqual(Object.keys(datasets), ['metadata', 'stops', 'stop-times', 'shapes'])
+    for (const [key, dataset] of Object.entries<any>(datasets)) assert.ok(dataset.id, `${key} doit avoir un identifiant`)
   })
 
   // Needs a real data-fair and the FTP container from docker-compose.yml.
@@ -56,7 +55,7 @@ describe('processing-gtfs', () => {
       processingConfig: {
         datasetMode: 'create',
         datasetTitle: 'GTFS Test FTP',
-        resources: { metadata: true, stops: true, stopTimes: true, shapes: true },
+        resources: ['metadata', 'stops', 'stop-times', 'shapes'],
         url: 'ftp://localhost:2121/upload/gtfs-gp.zip',
         username: 'test',
         downloadZip: true
@@ -68,9 +67,8 @@ describe('processing-gtfs', () => {
 
     const datasets = (context.processingConfig as any).datasets
     assert.equal(context.processingConfig.datasetMode, 'update')
-    assert.equal(datasets.length, 4)
-    assert.deepEqual(datasets.map((d: any) => d.key).sort(), ['metadata', 'shapes', 'stop-times', 'stops'])
-    for (const dataset of datasets) assert.ok(dataset.id, `${dataset.key} doit avoir un identifiant`)
+    assert.deepEqual(Object.keys(datasets), ['metadata', 'stops', 'stop-times', 'shapes'])
+    for (const [key, dataset] of Object.entries<any>(datasets)) assert.ok(dataset.id, `${key} doit avoir un identifiant`)
   })
 
   // Needs a real data-fair (for the test context), the SFTP container, and access

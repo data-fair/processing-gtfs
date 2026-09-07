@@ -1,0 +1,5 @@
+trip_id,arrival_time,departure_time,stop_id,stop_sequence,pickup_type,drop_off_type,timepoint
+TRIP-FREQ,06:00:00,06:00:00,STOP_1,1,0,0,1
+TRIP-FREQ,06:06:00,06:07:00,STOP_2,2,0,0,1
+TRIP-FIXE,23:50:00,23:50:00,STOP_2,1,0,0,1
+TRIP-FIXE,24:05:00,24:05:00,STOP_1,2,0,0,1

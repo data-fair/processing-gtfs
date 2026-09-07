@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert'
 import { describe, it } from 'node:test'
-import { migrateLegacyConfig } from '../lib/execute.ts'
+import { baseDatasetTitle, migrateLegacyConfig, wantedFromResources } from '../lib/execute.ts'
 
 const noopLog: any = {
   step: async () => {},
@@ -25,6 +25,8 @@ const fakeAxios = (existing: Record<string, string>): any => ({
   }
 })
 
+// @deprecated v0.3.10 compatibility: this whole suite goes with migrateLegacyConfig
+// at the next major
 describe('migration depuis la configuration héritée', () => {
   it('retrouve les quatre jeux dérivés et réécrit la configuration', async () => {
     const config: any = { datasetMode: 'update', dataset: { id: 'kiceo', title: 'Kicéo' } }
@@ -45,7 +47,8 @@ describe('migration depuis la configuration héritée', () => {
     assert.equal(refs?.[1].title, 'Kicéo - stops')
     assert.equal(patches.length, 1)
     assert.equal(patches[0].datasetMode, 'update')
-    assert.equal(patches[0].datasets.length, 4)
+    assert.deepEqual(Object.keys(patches[0].datasets), ['metadata', 'stops', 'stop-times', 'shapes'])
+    assert.deepEqual(patches[0].datasets.stops, { id: 'kiceo-stops', title: 'Kicéo - stops' })
   })
 
   it('ignore les jeux qui n\'existent plus au lieu de les inventer', async () => {
@@ -66,7 +69,37 @@ describe('migration depuis la configuration héritée', () => {
   })
 
   it('ne touche pas à une configuration déjà migrée', async () => {
-    const config: any = { datasetMode: 'update', datasets: [{ key: 'stops', id: 'x' }], dataset: { id: 'kiceo' } }
+    const config: any = { datasetMode: 'update', datasets: { stops: { id: 'x' } }, dataset: { id: 'kiceo' } }
+    const patches: any[] = []
+    const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
+    assert.equal(refs, null)
+    assert.equal(patches.length, 0)
+  })
+
+  it('convertit la liste de jeux de données en un jeu par rôle', async () => {
+    const config: any = {
+      datasetMode: 'update',
+      datasets: [
+        { key: 'stops', id: 'kiceo-stops', title: 'Kicéo - stops' },
+        { key: 'metadata', id: 'kiceo', title: 'Kicéo' },
+        // un rôle sans identifiant ne survit pas à la conversion
+        { key: 'shapes' }
+      ]
+    }
+    const patches: any[] = []
+    // aucun appel réseau : les identifiants sont déjà là, rien à retrouver
+    const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
+
+    assert.deepEqual(refs?.map(r => r.key), ['metadata', 'stops'])
+    assert.equal(patches.length, 1)
+    assert.deepEqual(patches[0].datasets, {
+      metadata: { id: 'kiceo', title: 'Kicéo' },
+      stops: { id: 'kiceo-stops', title: 'Kicéo - stops' }
+    })
+  })
+
+  it('ignore une liste de jeux de données vide plutôt que de la migrer', async () => {
+    const config: any = { datasetMode: 'update', datasets: [] }
     const patches: any[] = []
     const refs = await migrateLegacyConfig(config, fakeAxios({}), noopLog, async (p: any) => { patches.push(p) })
     assert.equal(refs, null)
@@ -91,5 +124,36 @@ describe('migration depuis la configuration héritée', () => {
       () => migrateLegacyConfig(config, axios, noopLog, async () => {}),
       /upstream down/
     )
+  })
+})
+
+describe('jeux à produire en mode création', () => {
+  it('respecte la sélection, dans l\'ordre de production', () => {
+    assert.deepEqual(wantedFromResources(['shapes', 'metadata']), ['metadata', 'shapes'])
+  })
+
+  // @deprecated v0.3.10 compatibility
+  it('produit les quatre jeux quand la configuration est antérieure aux rôles', () => {
+    // la version publiée ne connaissait pas resources et créait toujours les quatre jeux
+    assert.deepEqual(wantedFromResources(undefined), ['metadata', 'stops', 'stop-times', 'shapes'])
+  })
+
+  it('ne produit rien sur une sélection explicitement vide', () => {
+    assert.deepEqual(wantedFromResources([]), [])
+  })
+})
+
+describe('titre de base des jeux créés', () => {
+  it('prend le titre du formulaire actuel', () => {
+    assert.equal(baseDatasetTitle({ datasetTitle: 'Kicéo' }), 'Kicéo')
+  })
+
+  // @deprecated v0.3.10 compatibility
+  it("reprend le titre imbriqué d'une configuration publiée", () => {
+    assert.equal(baseDatasetTitle({ datasetMode: 'create', dataset: { title: 'Kicéo' } }), 'Kicéo')
+  })
+
+  it('ne fabrique pas un titre « undefined » quand il n\'y en a aucun', () => {
+    assert.equal(baseDatasetTitle({}), 'GTFS')
   })
 })

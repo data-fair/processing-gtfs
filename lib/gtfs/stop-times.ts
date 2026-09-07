@@ -3,11 +3,13 @@ import fs from 'fs-extra'
 import { pipeline } from 'node:stream/promises'
 import { Readable } from 'node:stream'
 import { stringify } from 'csv'
-import { iterCsv, requireFile, routeName, type Reference } from './read.ts'
+import { formatGtfsTime, iterCsv, parseGtfsTime, requireFile, routeName, type Reference } from './read.ts'
 
 export interface TripEnds {
   origin: string
   destination: string
+  /** departure at the first stop, in seconds; the offsets of a frequency trip hang off it */
+  anchor?: number
 }
 
 export interface StopTimesIndex {
@@ -33,7 +35,7 @@ export const buildStopTimesIndex = async (
   const file = requireFile(dir, 'stop_times.txt', 'les horaires')
   await log.info('Indexation de stop_times.txt')
 
-  const bounds = new Map<string, { minSeq: number, maxSeq: number, origin: string, destination: string }>()
+  const bounds = new Map<string, { minSeq: number, maxSeq: number, origin: string, destination: string, anchor?: number }>()
   const stopRoutes = options.collectStopRoutes ? new Map<string, Set<string>>() : undefined
 
   let index = 0
@@ -42,11 +44,14 @@ export const buildStopTimesIndex = async (
     const order = Number.isFinite(seq) ? seq : index
     index++
 
+    // stop_times.txt is not guaranteed to be sorted, so the first stop is the one with
+    // the lowest sequence, not the first row seen
+    const anchor = parseGtfsTime(line.departure_time) ?? parseGtfsTime(line.arrival_time)
     const current = bounds.get(line.trip_id)
     if (!current) {
-      bounds.set(line.trip_id, { minSeq: order, maxSeq: order, origin: line.stop_id, destination: line.stop_id })
+      bounds.set(line.trip_id, { minSeq: order, maxSeq: order, origin: line.stop_id, destination: line.stop_id, anchor })
     } else {
-      if (order < current.minSeq) { current.minSeq = order; current.origin = line.stop_id }
+      if (order < current.minSeq) { current.minSeq = order; current.origin = line.stop_id; current.anchor = anchor }
       if (order > current.maxSeq) { current.maxSeq = order; current.destination = line.stop_id }
     }
 
@@ -65,7 +70,8 @@ export const buildStopTimesIndex = async (
   for (const [tripId, b] of bounds) {
     tripEnds.set(tripId, {
       origin: ref.stops.get(b.origin)?.stop_name ?? '',
-      destination: ref.stops.get(b.destination)?.stop_name ?? ''
+      destination: ref.stops.get(b.destination)?.stop_name ?? '',
+      anchor: b.anchor
     })
   }
 
@@ -83,6 +89,9 @@ export const writeStopTimes = async (
   const file = requireFile(dir, 'stop_times.txt', 'les horaires')
   await log.info('Écriture de stop_times.csv')
 
+  let expandedTrips = 0
+  let expandedRows = 0
+
   async function * rows () {
     for await (const line of iterCsv(file)) {
       const trip = ref.trips.get(line.trip_id)
@@ -90,7 +99,7 @@ export const writeStopTimes = async (
       const dates = trip ? ref.calendar.get(trip.service_id) : undefined
       const stop = ref.stops.get(line.stop_id)
       const ends = tripEnds.get(line.trip_id)
-      yield {
+      const row = {
         trip_id: line.trip_id,
         // times may exceed 24:00:00 (25:30:00 is 1.30am the next day) for services
         // running past midnight: they are not clock times and must stay strings
@@ -115,6 +124,32 @@ export const writeStopTimes = async (
         pickup_type: line.pickup_type ?? '',
         drop_off_type: line.drop_off_type ?? ''
       }
+
+      // a trip listed in frequencies.txt has a single set of times in stop_times.txt,
+      // used as a template: the real passes are that template repeated every headway,
+      // shifted so that the first stop lands on each departure of the window
+      const windows = ref.frequencies.get(line.trip_id)
+      const arrival = parseGtfsTime(line.arrival_time)
+      const departure = parseGtfsTime(line.departure_time)
+      if (!windows?.length || ends?.anchor === undefined || (arrival === undefined && departure === undefined)) {
+        yield row
+        continue
+      }
+      const anchor = ends.anchor
+      let first = true
+      for (const window of windows) {
+        for (let time = window.start; time < window.end; time += window.headway) {
+          if (first) { expandedTrips++; first = false }
+          expandedRows++
+          yield {
+            ...row,
+            arrival_time: arrival === undefined ? '' : formatGtfsTime(time + arrival - anchor),
+            departure_time: departure === undefined ? '' : formatGtfsTime(time + departure - anchor),
+            // outside exact_times, only the headway is held, not the clock
+            timepoint: window.exactTimes ? row.timepoint : '0'
+          }
+        }
+      }
     }
   }
 
@@ -123,4 +158,8 @@ export const writeStopTimes = async (
     stringify({ header: true, quoted_string: true }),
     fs.createWriteStream(outFile, { encoding: 'utf8' })
   )
+
+  if (expandedRows) {
+    await log.info(`frequencies.txt : ${expandedTrips} passages de référence déployés en ${expandedRows} passages réels.`)
+  }
 }
