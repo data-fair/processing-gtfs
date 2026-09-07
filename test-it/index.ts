@@ -4,11 +4,11 @@ import testUtils from '@data-fair/lib-processing-dev/tests-utils.js'
 import processingSchema from '../processing-config-schema.json' with { type: 'json' }
 import * as gtfsProcessing from '../index.ts'
 
-// lib/config.ts refuses to load without a data-fair instance declared in
+// #config refuses to load without a data-fair instance declared in
 // config/local-test.mjs, which is gitignored: the integration test is then skipped
 let config: any = null
 try {
-  config = (await import('../lib/config.ts')).default
+  config = (await import('#config')).default
 } catch {
   config = null
 }
