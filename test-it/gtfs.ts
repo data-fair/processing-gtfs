@@ -105,7 +105,6 @@ describe('horaires', () => {
     const rows = await readCsv(out)
     assert.equal(rows.length, 4)
     assert.ok(rows.some(r => r.trip_id === 'TRIP-A1' && r.stop_id === 'STOP_A12'))
-    assert.equal(rows.find(r => r.stop_id === 'STOP_A12')?.route_color, '#FF0000')
   })
 
   it('reporte le sens de circulation et la précision de l\'horaire', async () => {
@@ -120,6 +119,18 @@ describe('horaires', () => {
     assert.equal(rows.find(r => r.trip_id === 'TRIP-B1')?.direction_id, '1')
     // un timepoint vide vaut « horaire garanti » selon la spec, il reste vide en donnée
     assert.equal(rows.find(r => r.trip_id === 'TRIP-B1')?.timepoint, '')
+  })
+
+  it("n'écrit aucun attribut d'arrêt ni de ligne dans le fichier", async () => {
+    const ref = await loadReference(ALNUM)
+    const { tripEnds } = await buildStopTimesIndex(ALNUM, ref, { collectStopRoutes: false }, noopLog)
+    const out = path.join(OUT, 'stop_times_columns.csv')
+    await writeStopTimes(ALNUM, ref, tripEnds, out, noopLog)
+    const rows = await readCsv(out)
+    for (const key of ['stop_lat', 'stop_lng', 'route_color', 'location_type', 'wheelchair_boarding']) {
+      assert.ok(!(key in rows[0]), `${key} ne doit plus être écrit`)
+    }
+    assert.equal(rows[0].stop_name !== undefined, true)
   })
 
   it('laisse intactes les heures au-delà de 24:00:00', async () => {
@@ -202,6 +213,11 @@ describe('schémas de sortie', () => {
     const byKey = Object.fromEntries(schemas['stop-times'].map(p => [p.key, p]))
     assert.equal(byKey.start_date.format, 'date')
     assert.equal(byKey.start_date['x-refersTo'], 'https://schema.org/startDate')
+    assert.equal(byKey.end_date['x-refersTo'], 'https://schema.org/endDate')
+  })
+
+  it('pose la couleur de la ligne sur les traces', () => {
+    const byKey = Object.fromEntries(schemas.shapes.map(p => [p.key, p]))
     assert.equal(byKey.route_color['x-refersTo'], 'https://schema.org/color')
   })
 
@@ -215,6 +231,19 @@ describe('schémas de sortie', () => {
     assert.equal(stopTimes.route_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
     const shapes = Object.fromEntries(schemas.shapes.map(p => [p.key, p]))
     assert.equal(shapes.route_short_name['x-refersTo'], 'http://vocab.gtfs.org/terms#Route')
+  })
+
+  // les horaires n'embarquent plus les attributs qui décrivent l'arrêt ou la ligne :
+  // ils vivent dans les jeux arrêts et tracés, que les applications lisent en parallèle
+  it("ne duplique dans les horaires aucun attribut d'arrêt ni de ligne", () => {
+    const keys = schemas['stop-times'].map(p => p.key)
+    for (const key of ['stop_lat', 'stop_lng', 'route_color', 'location_type', 'wheelchair_boarding']) {
+      assert.ok(!keys.includes(key), `${key} ne doit plus figurer dans les horaires`)
+    }
+    // le libellé de l'arrêt reste, sans lui chaque ligne n'est qu'un identifiant
+    assert.ok(keys.includes('stop_name'))
+    assert.ok(keys.includes('stop_origin'))
+    assert.ok(keys.includes('stop_destination'))
   })
 })
 

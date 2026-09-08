@@ -40,8 +40,6 @@ const DESCRIPTION = 'http://schema.org/description'
 const GEOMETRY = 'https://purl.org/geojson/vocab#geometry'
 const WEB_PAGE = 'https://schema.org/WebPage'
 const COLOR = 'https://schema.org/color'
-const LATITUDE = 'http://schema.org/latitude'
-const LONGITUDE = 'http://schema.org/longitude'
 const START_DATE = 'https://schema.org/startDate'
 const END_DATE = 'https://schema.org/endDate'
 
@@ -210,7 +208,6 @@ export const SCHEMAS: Record<Exclude<ResourceKey, 'metadata'>, SchemaProperty[]>
     { key: 'stop_origin', title: 'Origine', description: 'Premier arrêt de la course.', type: 'string' },
     { key: 'stop_destination', title: 'Destination', description: 'Dernier arrêt de la course.', type: 'string' },
     { key: 'route_name', title: 'Ligne', type: 'string', 'x-refersTo': ROUTE },
-    routeColor,
     directionId,
     {
       key: 'timepoint',
@@ -227,10 +224,6 @@ export const SCHEMAS: Record<Exclude<ResourceKey, 'metadata'>, SchemaProperty[]>
     { key: 'week', title: 'Jours de circulation', type: 'string', separator: ';' },
     { key: 'start_date', title: 'Début de validité', type: 'string', format: 'date', 'x-refersTo': START_DATE },
     { key: 'end_date', title: 'Fin de validité', type: 'string', format: 'date', 'x-refersTo': END_DATE },
-    { key: 'stop_lat', title: "Latitude de l'arrêt", type: 'number', 'x-refersTo': LATITUDE },
-    { key: 'stop_lng', title: "Longitude de l'arrêt", type: 'number', 'x-refersTo': LONGITUDE },
-    locationType,
-    wheelchairBoarding,
     {
       key: 'pickup_type',
       title: 'Modalité de montée',

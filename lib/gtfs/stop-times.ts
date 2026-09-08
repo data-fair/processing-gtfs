@@ -111,16 +111,11 @@ export const writeStopTimes = async (
         stop_origin: ends?.origin ?? '',
         stop_destination: ends?.destination ?? '',
         route_name: routeName(route),
-        route_color: route?.route_color ?? '',
         direction_id: trip?.direction_id ?? '',
         timepoint: line.timepoint ?? '',
         week: dates?.week ?? '',
         start_date: dates?.start_date ?? '',
         end_date: dates?.end_date ?? '',
-        stop_lat: stop?.stop_lat ?? '',
-        stop_lng: stop?.stop_lng ?? '',
-        location_type: stop?.location_type ?? '',
-        wheelchair_boarding: stop?.wheelchair_boarding ?? '',
         pickup_type: line.pickup_type ?? '',
         drop_off_type: line.drop_off_type ?? ''
       }

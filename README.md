@@ -9,11 +9,18 @@ jusqu'à quatre jeux de données, chacun activable indépendamment :
 |---|---|
 | Métadonnées | jeu sans données, porteur du zip ou des `.txt` en pièces jointes |
 | Arrêts | points GeoJSON, un par arrêt, avec les lignes qui le desservent |
-| Horaires | passages dénormalisés (arrêt, ligne, période de validité) |
+| Horaires | un passage par arrêt et par course : heures, sens, jours et période de validité |
 | Tracés | LineString GeoJSON, un par `shape_id` |
 
 Les jeux produits sont reliés entre eux par `relatedDatasets`, et ces liens sont
 rafraîchis à chaque exécution.
+
+Chaque jeu ne porte que ce qui relève de sa granularité : les coordonnées, le type
+d'emplacement et l'accessibilité d'un arrêt vivent dans le jeu arrêts, la couleur d'une
+ligne dans le jeu tracés. Les horaires n'en gardent que le libellé de l'arrêt et le nom
+de la ligne, de quoi rester lisibles seuls. Les applications qui ont besoin des deux
+(atelier cartographique, app-gtfs) lisent les jeux côte à côte et les rapprochent par les
+concepts `#Stop` et `#Route`, posés sur les trois.
 
 ## Mode validation
 
