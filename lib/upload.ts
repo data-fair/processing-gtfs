@@ -36,7 +36,9 @@ const sendForm = async (axios: AxiosInstance, url: string, formData: FormData, l
   })
 }
 
-export const datasetTitle = (baseTitle: string, key: ResourceKey) => `${baseTitle} - ${RESOURCE_TITLES[key]}`
+/** The metadata dataset stands for the whole GTFS: it keeps the base title, the others are suffixed by their role. */
+export const datasetTitle = (baseTitle: string, key: ResourceKey) =>
+  key === 'metadata' ? baseTitle : `${baseTitle} - ${RESOURCE_TITLES[key]}`
 
 export const createMetadataDataset = async (axios: AxiosInstance, title: string, log: LogFunctions): Promise<DatasetRef> => {
   // license, description and origin are deliberately left alone: they belong to whoever

@@ -167,7 +167,7 @@
                     "type": "string",
                     "title": "Titre de base des jeux de données",
                     "default": "GTFS",
-                    "description": "Chaque jeu créé porte ce titre suivi de son rôle, par exemple « GTFS - arrêts ». Les jeux ne sont créés qu'une fois : la configuration bascule ensuite en mise à jour."
+                    "description": "Le jeu de métadonnées porte ce titre, les autres le font suivre de leur rôle, par exemple « GTFS - arrêts ». Les jeux ne sont créés qu'une fois : la configuration bascule ensuite en mise à jour."
                   },
                   "resources": {
                     "type": "array",
