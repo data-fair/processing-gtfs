@@ -1,7 +1,6 @@
 import type { ProcessingContext } from '@data-fair/lib-common-types/processings.js'
 import type { ProcessingConfig } from '#types/processingConfig/index.ts'
 import path from 'node:path'
-import fs from 'fs-extra'
 import { extractZip, fetchZip } from './download.ts'
 import { DEFAULT_VALIDATOR_URL, logValidation, summarize, validateZip } from './validate.ts'
 import { hasFile, loadCalendar, loadFrequencies, loadRoutes, loadStops, loadTrips, type Reference } from './gtfs/read.ts'
@@ -298,10 +297,7 @@ export const run = async (context: ProcessingContext<ProcessingConfig>) => {
   const metadataRef = refs.find(r => r.key === 'metadata')
   if (metadataRef) {
     await log.step('Pièces jointes')
-    const attachments = config.downloadZip
-      ? [zipPath]
-      : (await fs.readdir(gtfsDir)).filter(f => f.endsWith('.txt')).sort().map(f => path.join(gtfsDir, f))
-    await uploadAttachments(axios, metadataRef, attachments, log)
+    await uploadAttachments(axios, metadataRef, [zipPath], log)
     if (config.realtimeUrl) {
       await uploadRealtimeAttachment(axios, metadataRef, config.realtimeUrl, log)
     }

@@ -428,12 +428,6 @@
           },
           "then": {
             "properties": {
-              "downloadZip": {
-                "type": "boolean",
-                "title": "Publier les fichiers sources comme fichier zip sur le jeu de métadonnées",
-                "description": "Sinon les fichiers sources seront publiés directement dézippés.",
-                "default": false
-              },
               "realtimeUrl": {
                 "type": "string",
                 "title": "URL du flux GTFS-RT (VehiclePositions)",

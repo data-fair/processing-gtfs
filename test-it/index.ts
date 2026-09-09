@@ -76,8 +76,7 @@ describe('processing-gtfs', () => {
         datasetTitle: 'GTFS Test',
         resources: ['metadata', 'stops', 'stop-times', 'shapes'],
         url: 'sftp://localhost:2222/upload/gtfs-gp.zip',
-        username: 'test',
-        downloadZip: true
+        username: 'test'
       },
       secrets: { password: 'testmotdepasse' }
     }, config, false)
@@ -98,8 +97,7 @@ describe('processing-gtfs', () => {
         datasetTitle: 'GTFS Test FTP',
         resources: ['metadata', 'stops', 'stop-times', 'shapes'],
         url: 'ftp://localhost:2121/upload/gtfs-gp.zip',
-        username: 'test',
-        downloadZip: true
+        username: 'test'
       },
       secrets: { password: 'testmotdepasse' }
     }, config, false)

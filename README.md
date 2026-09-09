@@ -7,7 +7,7 @@ jusqu'à quatre jeux de données, chacun activable indépendamment :
 
 | Jeu | Contenu |
 |---|---|
-| Métadonnées | jeu sans données, porteur du zip ou des `.txt` en pièces jointes |
+| Métadonnées | jeu sans données, porteur de l'archive zip en pièce jointe |
 | Arrêts | points GeoJSON, un par arrêt, avec les lignes qui le desservent |
 | Horaires | un passage par arrêt et par course : heures, sens, jours et période de validité |
 | Tracés | LineString GeoJSON, un par `shape_id` |
